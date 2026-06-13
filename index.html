@@ -1,0 +1,2282 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creative Sudani - نظام التحقق من الشهادات</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --primary: #1E90FF;
+            --primary-light: #00BFFF;
+            --primary-dark: #0066CC;
+            --accent: #00CEC9;
+            --accent-glow: rgba(0, 206, 201, 0.3);
+            --bg-dark: #0A0A0F;
+            --bg-card: #12121E;
+            --bg-card-hover: #1A1A2E;
+            --bg-input: #0D1B2A;
+            --border: rgba(30, 144, 255, 0.2);
+            --border-focus: rgba(30, 144, 255, 0.5);
+            --text-primary: #E8E8F0;
+            --text-secondary: #A0A0B8;
+            --text-muted: #6B6B8A;
+            --success: #00B894;
+            --danger: #E17055;
+            --warning: #FDCB6E;
+            --glass: rgba(18, 18, 30, 0.85);
+            --glass-border: rgba(30, 144, 255, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-animation {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(30, 144, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 191, 255, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(30, 144, 255, 0.04) 0%, transparent 70%);
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(-2%, 2%) rotate(1deg); }
+            66% { transform: translate(2%, -1%) rotate(-1deg); }
+        }
+
+        .navbar {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: white;
+            box-shadow: 0 4px 15px rgba(30, 144, 255, 0.4);
+        }
+
+        .logo-text {
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text-primary), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: rgba(30, 144, 255, 0.15);
+            color: var(--primary-light);
+        }
+
+        .nav-btn.admin-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 15px rgba(30, 144, 255, 0.3);
+        }
+
+        .nav-btn.admin-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 144, 255, 0.4);
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: calc(100vh - 80px);
+        }
+
+        .page-section {
+            display: none;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .page-section.active {
+            display: block;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .verify-hero {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .verify-hero h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--text-primary), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .verify-hero p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .search-container {
+            max-width: 600px;
+            margin: 0 auto 3rem;
+            position: relative;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 1.2rem 1.5rem;
+            padding-left: 3.5rem;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            color: var(--text-primary);
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .search-box:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(30, 144, 255, 0.2);
+        }
+
+        .search-box::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1.2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        .search-btn {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(30, 144, 255, 0.4);
+        }
+
+        .cert-result {
+            display: none;
+            max-width: 700px;
+            margin: 0 auto;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .cert-result.show {
+            display: block;
+        }
+
+        .cert-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .cert-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cert-header::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: translate(-30%, -30%) rotate(0deg); }
+            50% { transform: translate(30%, 30%) rotate(180deg); }
+        }
+
+        .cert-badge {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2rem;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .cert-header h2 {
+            font-size: 1.5rem;
+            color: white;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cert-header p {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cert-body {
+            padding: 2rem;
+        }
+
+        .cert-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 1rem;
+            background: var(--bg-input);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .info-item:hover {
+            border-color: var(--primary);
+            transform: translateX(-5px);
+        }
+
+        .info-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(30, 144, 255, 0.15);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-light);
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .info-content label {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+
+        .info-content span {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.4rem 1rem;
+            background: rgba(0, 184, 148, 0.15);
+            color: var(--success);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .cert-footer {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.2rem;
+            background: linear-gradient(135deg, rgba(30,144,255,0.04), rgba(0,206,201,0.04));
+        }
+
+        /* Professional QR + Link block */
+        .verify-block {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 18px;
+            flex: 1;
+            min-width: 280px;
+            max-width: 520px;
+        }
+
+        .verify-block-qr {
+            flex-shrink: 0;
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .verify-block-qr canvas,
+        .verify-block-qr img {
+            width: 72px !important;
+            height: 72px !important;
+        }
+
+        .verify-block-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .verify-block-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--primary-light);
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            letter-spacing: 0.3px;
+        }
+
+        .verify-link-display {
+            display: block;
+            color: var(--text-primary);
+            font-size: 0.78rem;
+            text-decoration: none;
+            word-break: break-all;
+            line-height: 1.4;
+            font-family: 'Courier New', monospace;
+            background: rgba(30,144,255,0.08);
+            border: 1px solid rgba(30,144,255,0.2);
+            border-radius: 6px;
+            padding: 5px 8px;
+            transition: all 0.2s;
+        }
+
+        .verify-link-display:hover {
+            background: rgba(30,144,255,0.15);
+            border-color: rgba(30,144,255,0.4);
+            color: var(--primary-light);
+        }
+
+        .verify-block-hint {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            margin-top: 5px;
+        }
+
+        .cert-footer-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .verify-link {
+            color: var(--primary-light);
+            font-size: 0.85rem;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .official-seal {
+            margin: 2rem auto;
+            max-width: 500px;
+            text-align: center;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(0, 206, 201, 0.1), rgba(30, 144, 255, 0.1));
+            border: 2px dashed var(--accent);
+            border-radius: 16px;
+            position: relative;
+        }
+
+        .official-seal::before {
+            content: '✓';
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            width: 30px;
+            height: 30px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .official-seal i { font-size: 2rem; color: var(--accent); margin-bottom: 0.5rem; }
+        .official-seal h3 { color: var(--accent); font-size: 1.1rem; margin-bottom: 0.3rem; }
+        .official-seal p { color: var(--text-secondary); font-size: 0.85rem; }
+
+        .not-found {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+            background: var(--bg-card);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .not-found.show { display: block; animation: fadeInUp 0.5s ease; }
+        .not-found i { font-size: 4rem; color: var(--danger); margin-bottom: 1rem; opacity: 0.8; }
+        .not-found h3 { color: var(--text-primary); margin-bottom: 0.5rem; }
+        .not-found p { color: var(--text-secondary); }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .admin-header h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, var(--text-primary), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .stat-icon {
+            width: 50px; height: 50px;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .stat-icon.purple { background: rgba(108,92,231,0.2); color: #a29bfe; }
+        .stat-icon.cyan { background: rgba(0,206,201,0.2); color: var(--accent); }
+        .stat-icon.green { background: rgba(0,184,148,0.2); color: var(--success); }
+        .stat-icon.orange { background: rgba(253,203,110,0.2); color: var(--warning); }
+
+        .stat-info h4 { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 4px; }
+        .stat-info span { font-size: 1.8rem; font-weight: 800; color: var(--text-primary); }
+
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.7rem 1.2rem;
+            border-radius: 10px;
+            border: none;
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 15px rgba(30, 144, 255, 0.3);
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(30, 144, 255, 0.4); }
+
+        .btn-danger { background: rgba(225, 112, 85, 0.15); color: var(--danger); border: 1px solid rgba(225, 112, 85, 0.3); }
+        .btn-danger:hover { background: rgba(225, 112, 85, 0.25); }
+
+        .btn-secondary { background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { border-color: var(--primary); color: var(--text-primary); }
+
+        .btn-success { background: rgba(0,184,148,0.15); color: var(--success); border: 1px solid rgba(0,184,148,0.3); }
+        .btn-success:hover { background: rgba(0,184,148,0.25); }
+
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            overflow-x: auto;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th {
+            background: var(--bg-input);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 1rem;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        tr:hover td { background: rgba(30, 144, 255, 0.05); }
+
+        .cert-id {
+            font-family: 'Courier New', monospace;
+            background: rgba(30, 144, 255, 0.1);
+            padding: 0.3rem 0.8rem;
+            border-radius: 6px;
+            color: var(--primary-light);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .table-actions { display: flex; gap: 6px; }
+
+        .table-actions button {
+            width: 32px; height: 32px;
+            border-radius: 8px; border: none;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+        }
+
+        .btn-edit { background: rgba(0, 206, 201, 0.15); color: var(--accent); }
+        .btn-edit:hover { background: rgba(0, 206, 201, 0.25); }
+        .btn-delete { background: rgba(225, 112, 85, 0.15); color: var(--danger); }
+        .btn-delete:hover { background: rgba(225, 112, 85, 0.25); }
+        .btn-view { background: rgba(30, 144, 255, 0.15); color: var(--primary-light); }
+        .btn-view:hover { background: rgba(30, 144, 255, 0.25); }
+        .btn-cert { background: rgba(0, 184, 148, 0.15); color: var(--success); }
+        .btn-cert:hover { background: rgba(0, 184, 148, 0.25); }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.show { display: flex; animation: fadeIn 0.3s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 { font-size: 1.3rem; }
+
+        .modal-close {
+            width: 36px; height: 36px;
+            border-radius: 10px; border: none;
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover { background: var(--danger); color: white; }
+
+        .modal-body { padding: 1.5rem; }
+
+        .form-group { margin-bottom: 1.2rem; }
+
+        .form-group label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            background: var(--bg-input);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(30, 144, 255, 0.15);
+        }
+
+        .form-group input::placeholder { color: var(--text-muted); }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .login-form { text-align: center; padding: 1rem 0; }
+        .login-form .logo-icon { margin: 0 auto 1rem; width: 60px; height: 60px; font-size: 1.8rem; }
+        .login-form h2 { margin-bottom: 0.5rem; }
+        .login-form p { color: var(--text-muted); margin-bottom: 1.5rem; }
+
+        .toast-container {
+            position: fixed;
+            top: 100px; left: 20px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideInLeft 0.3s ease, fadeOut 0.3s ease 2.7s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.info { background: var(--primary); }
+
+        .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+        .empty-state i { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
+
+        @media (max-width: 768px) {
+            .navbar { padding: 1rem; flex-direction: column; gap: 1rem; }
+            .nav-links { gap: 4px; }
+            .nav-btn span { display: none; }
+            .main-container { padding: 1rem; }
+            .verify-hero h1 { font-size: 1.8rem; }
+            .cert-info-grid { grid-template-columns: 1fr; }
+            .admin-header { flex-direction: column; align-items: flex-start; }
+            .action-bar { flex-direction: column; width: 100%; }
+            .action-bar .search-box { max-width: 100%; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .cert-footer { flex-direction: column; align-items: stretch; }
+            .verify-block { max-width: 100%; }
+            .cert-footer-actions { justify-content: center; }
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #certResult, #certResult * { visibility: visible; }
+            #certResult {
+                position: absolute; top: 0; left: 0; width: 100%;
+                margin: 0; max-width: 100%;
+            }
+            .cert-footer-actions, .verify-block-hint { display: none !important; }
+        }
+
+        .spinner {
+            width: 20px; height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .course-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 0.4rem 1rem;
+            background: rgba(0, 206, 201, 0.1);
+            color: var(--accent);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .qr-modal-body { text-align: center; padding: 2rem; }
+        .qr-modal-body .cert-badge { width: 70px; height: 70px; font-size: 1.8rem; margin-bottom: 1rem; }
+
+        .qr-display {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            display: inline-block;
+            margin: 1rem 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .qr-display canvas, .qr-display img { display: block; margin: 0 auto; }
+
+        .cert-link-box {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        }
+
+        .cert-link-box input {
+            flex: 1; min-width: 200px;
+            background: transparent; border: none;
+            color: var(--primary-light);
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem; outline: none;
+        }
+
+        .cert-link-box button {
+            padding: 0.5rem 1rem;
+            border-radius: 8px; border: none;
+            background: var(--primary); color: white;
+            cursor: pointer; font-family: 'Cairo', sans-serif;
+            font-size: 0.85rem; transition: all 0.2s;
+        }
+
+        .cert-link-box button:hover { background: var(--primary-dark); }
+
+        .qr-cert-info {
+            margin-top: 1rem; padding: 1rem;
+            background: rgba(30, 144, 255, 0.05);
+            border-radius: 12px; border: 1px solid var(--border);
+        }
+
+        .qr-cert-info p { color: var(--text-secondary); font-size: 0.9rem; margin: 0.3rem 0; }
+        .qr-cert-info strong { color: var(--text-primary); }
+
+        /* Loading overlay */
+        .db-loading {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(10, 10, 15, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            gap: 16px;
+        }
+
+        .db-loading.hide { display: none; }
+        .db-loading p { color: var(--text-secondary); font-size: 1rem; }
+        .db-loading .spinner { width: 40px; height: 40px; border-width: 3px; border-top-color: var(--primary); }
+
+        /* Sync indicator */
+        .sync-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .sync-indicator.synced { background: rgba(0,184,148,0.15); color: var(--success); }
+        .sync-indicator.syncing { background: rgba(253,203,110,0.15); color: var(--warning); }
+        .sync-indicator.error { background: rgba(225,112,85,0.15); color: var(--danger); }
+
+        .sync-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div class="db-loading" id="dbLoading">
+        <div class="spinner"></div>
+        <p>جاري الاتصال بقاعدة البيانات...</p>
+    </div>
+
+    <div class="bg-animation"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <nav class="navbar">
+        <a href="creative_sudani_final.html" class="logo">
+            <div class="logo-icon"><i class="fas fa-certificate"></i></div>
+            <span class="logo-text">Creative Sudani</span>
+        </a>
+        <div class="nav-links">
+            <a href="creative_sudani_final.html" class="nav-btn">
+                <i class="fas fa-home"></i>
+                <span>الرئيسية</span>
+            </a>
+            <button class="nav-btn active" onclick="showPage('verify')" id="nav-verify">
+                <i class="fas fa-search"></i>
+                <span>التحقق من الشهادات</span>
+            </button>
+            <button class="nav-btn admin-btn" onclick="showAdminLogin()" id="nav-admin">
+                <i class="fas fa-shield-alt"></i>
+                <span>لوحة الإدارة</span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <!-- Verify Page -->
+        <div class="page-section active" id="page-verify">
+            <div class="verify-hero">
+                <h1>التحقق من الشهادات</h1>
+                <p>أدخل رقم الشهادة للتحقق من صحتها والاطلاع على تفاصيلها الكاملة. جميع الشهادات الصادرة من منصة Creative Sudani موثقة رقمياً.</p>
+            </div>
+
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-box" id="certSearchInput" placeholder="أدخل رقم الشهادة (مثال: CS-2026-001)" onkeypress="if(event.key==='Enter')searchCertificate()">
+                <button class="search-btn" onclick="searchCertificate()">
+                    <i class="fas fa-check-circle"></i>
+                    تحقق من الشهادة
+                </button>
+            </div>
+
+            <div class="cert-result" id="certResult">
+                <div class="cert-card">
+                    <div class="cert-header">
+                        <div class="cert-badge"><i class="fas fa-shield-alt"></i></div>
+                        <h2>شهادة موثقة رقمياً ✓</h2>
+                        <p>تم التحقق من صحة هذه الشهادة وإصدارها رسمياً من منصة Creative Sudani</p>
+                    </div>
+                    <div class="cert-body">
+                        <div class="cert-info-grid">
+                            <div class="info-item">
+                                <div class="info-icon"><i class="fas fa-user"></i></div>
+                                <div class="info-content"><label>اسم الطالب</label><span id="resName">-</span></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-icon"><i class="fas fa-hashtag"></i></div>
+                                <div class="info-content"><label>رقم الشهادة</label><span id="resId">-</span></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-icon"><i class="fas fa-book"></i></div>
+                                <div class="info-content"><label>اسم الكورس</label><span id="resCourse">-</span></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-icon"><i class="fas fa-calendar-alt"></i></div>
+                                <div class="info-content"><label>تاريخ الإصدار</label><span id="resDate">-</span></div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-icon"><i class="fas fa-check-circle"></i></div>
+                                <div class="info-content">
+                                    <label>حالة الشهادة</label>
+                                    <span class="status-badge" id="resStatusBadge"><i class="fas fa-check"></i> موثقة رقمياً</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cert-footer">
+                        <!-- QR + Link section (professional layout) -->
+                        <div class="verify-block">
+                            <div class="verify-block-qr">
+                                <div id="resultQR"></div>
+                            </div>
+                            <div class="verify-block-info">
+                                <div class="verify-block-title">
+                                    <i class="fas fa-shield-alt"></i>
+                                    رابط التحقق الرسمي
+                                </div>
+                                <a href="#" class="verify-link-display" id="resLink" target="_blank">-</a>
+                                <div class="verify-block-hint">امسح رمز QR أو افتح الرابط للتحقق من الشهادة</div>
+                            </div>
+                        </div>
+                        <!-- Action buttons -->
+                        <div class="cert-footer-actions">
+                            <button class="btn btn-secondary" onclick="printVerifyResult()">
+                                <i class="fas fa-print"></i>
+                                طباعة
+                            </button>
+                            <button class="btn btn-secondary" onclick="copyVerifyLink()">
+                                <i class="fas fa-copy"></i>
+                                نسخ رابط التحقق
+                            </button>
+                            <button class="btn btn-secondary" onclick="downloadResultQR()">
+                                <i class="fas fa-download"></i>
+                                تحميل QR كصورة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="official-seal">
+                    <i class="fas fa-stamp"></i>
+                    <h3>شهادة إتمام رسمية موثقة رقمياً</h3>
+                    <p>صادرة من منصة Creative Sudani - جميع الحقوق محفوظة © 2026</p>
+                </div>
+            </div>
+
+            <div class="not-found" id="notFound">
+                <i class="fas fa-times-circle"></i>
+                <h3>لم يتم العثور على الشهادة</h3>
+                <p>رقم الشهادة الذي أدخلته غير موجود في قاعدة البيانات. يرجى التأكد من الرقم والمحاولة مرة أخرى.</p>
+            </div>
+        </div>
+
+        <!-- Admin Page -->
+        <div class="page-section" id="page-admin">
+            <div class="admin-header">
+                <div>
+                    <h1><i class="fas fa-shield-alt"></i> لوحة تحكم الإدارة</h1>
+                    <p style="color: var(--text-muted); margin-top: 5px; font-size: 0.9rem;">
+                        <i class="fas fa-user-circle"></i> المستخدم الحالي: <span id="currentUserDisplay" style="color: var(--primary-light);">-</span>
+                        &nbsp;&nbsp;
+                        <span class="sync-indicator synced" id="syncIndicator">
+                            <span class="sync-dot"></span> Supabase متصل
+                        </span>
+                    </p>
+                </div>
+                <button class="btn btn-secondary" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    تسجيل الخروج
+                </button>
+            </div>
+
+            <div style="background: linear-gradient(135deg, rgba(0,206,201,0.1), rgba(30,144,255,0.1)); border: 1px dashed var(--accent); border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px;">
+                <i class="fas fa-cloud" style="color: var(--accent); font-size: 1.3rem;"></i>
+                <div>
+                    <strong style="color: var(--success);">تخزين سحابي مُفعَّل (Supabase):</strong>
+                    <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                        جميع التغييرات تُحفظ <strong style="color: var(--primary-light);">فوراً في قاعدة البيانات السحابية</strong> وتظهر على جميع الأجهزة تلقائياً.
+                    </span>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fas fa-certificate"></i></div>
+                    <div class="stat-info"><h4>إجمالي الشهادات</h4><span id="statTotal">0</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon cyan"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-info"><h4>الشهادات الموثقة</h4><span id="statActive">0</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fas fa-graduation-cap"></i></div>
+                    <div class="stat-info"><h4>عدد المتدربين</h4><span id="statTrainees">0</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fas fa-book"></i></div>
+                    <div class="stat-info"><h4>عدد الكورسات</h4><span id="statCourses">0</span></div>
+                </div>
+            </div>
+
+            <div class="admin-tabs" style="display:flex; gap:10px; margin-bottom:1.5rem; border-bottom:1px solid var(--border); padding-bottom:10px;">
+                <button class="nav-btn active" id="adminTabCerts" onclick="showAdminTab('certs')">
+                    <i class="fas fa-certificate"></i>
+                    <span>إدارة الشهادات</span>
+                </button>
+                <button class="nav-btn" id="adminTabCourses" onclick="showAdminTab('courses')">
+                    <i class="fas fa-book"></i>
+                    <span>إدارة الكورسات</span>
+                </button>
+            </div>
+
+            <div id="adminCertsView">
+            <div class="action-bar">
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="btn btn-primary" onclick="openAddModal()">
+                        <i class="fas fa-plus"></i> إضافة شهادة جديدة
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportData()">
+                        <i class="fas fa-download"></i> تصدير JSON
+                    </button>
+                    <button class="btn btn-secondary" onclick="importData()" style="color: var(--accent); border-color: var(--accent);">
+                        <i class="fas fa-upload"></i> استيراد JSON
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshFromDB()" style="color: var(--primary-light);">
+                        <i class="fas fa-sync-alt"></i> تحديث من السحابة
+                    </button>
+                </div>
+                <input type="text" class="search-box" id="adminSearch" placeholder="البحث في الشهادات..." oninput="filterCertificates()" style="max-width:250px;">
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>رقم الشهادة</th>
+                            <th>اسم المتدرب</th>
+                            <th>الكورس</th>
+                            <th>المدة</th>
+                            <th>تاريخ الإصدار</th>
+                            <th>الحالة</th>
+                            <th>QR / لينك</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="certTableBody"></tbody>
+                </table>
+                <div class="empty-state" id="emptyState" style="display:none;">
+                    <i class="fas fa-inbox"></i>
+                    <h3>لا توجد شهادات</h3>
+                    <p>قم بإضافة شهادة جديدة للبدء</p>
+                </div>
+            </div>
+            </div>
+
+            <div id="adminCoursesView" style="display:none;">
+                <div class="action-bar">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="openAddCourseModal()">
+                            <i class="fas fa-plus"></i> إضافة كورس جديد
+                        </button>
+                    </div>
+                    <input type="text" class="search-box" id="courseSearch" placeholder="البحث في الكورسات..." oninput="renderCoursesTable()" style="max-width:250px;">
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>اسم الكورس</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="courseTableBody"></tbody>
+                    </table>
+                    <div class="empty-state" id="coursesEmptyState" style="display:none;">
+                        <i class="fas fa-inbox"></i>
+                        <h3>لا توجد كورسات</h3>
+                        <p>قم بإضافة كورس جديد للبدء</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal" style="max-width:400px;">
+            <div class="modal-body">
+                <div class="login-form">
+                    <div class="logo-icon"><i class="fas fa-shield-alt"></i></div>
+                    <h2>تسجيل الدخول</h2>
+                    <p>أدخل بيانات الدخول للوصول إلى لوحة الإدارة</p>
+                    <div class="form-group">
+                        <label>اسم المستخدم</label>
+                        <input type="text" id="loginUser" placeholder="اسم المستخدم">
+                    </div>
+                    <div class="form-group">
+                        <label>كلمة المرور</label>
+                        <input type="password" id="loginPass" placeholder="كلمة المرور" onkeypress="if(event.key==='Enter')doLogin()">
+                    </div>
+                    <button class="btn btn-primary" style="width:100%; margin-top:1rem; justify-content:center;" onclick="doLogin()">
+                        <i class="fas fa-sign-in-alt"></i> دخول
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Certificate Modal -->
+    <div class="modal-overlay" id="certModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">إضافة شهادة جديدة</h2>
+                <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>رقم الشهادة <span style="color:var(--danger)">*</span></span>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:400; cursor:pointer; color:var(--text-muted); margin:0;">
+                            <input type="checkbox" id="manualIdToggle" onchange="toggleManualId()" style="accent-color:var(--primary); width:14px; height:14px;">
+                            كتابة يدوياً
+                        </label>
+                    </label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" id="certId" readonly style="background:rgba(30,144,255,0.1); color:var(--primary-light); flex:1; font-family:monospace; letter-spacing:1px;">
+                        <button type="button" id="regenIdBtn" onclick="regenCertId()" title="توليد رقم جديد"
+                            style="width:38px; height:42px; border-radius:10px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-muted); cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:all .2s;">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>اسم المتدرب <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="certName" placeholder="أدخل اسم المتدرب الكامل">
+                </div>
+                <div class="form-group">
+                    <label>اسم الكورس <span style="color:var(--danger)">*</span></label>
+                    <select id="certCourse">
+                        <option value="">اختر الكورس...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>مدة الكورس <span style="color:var(--danger)">*</span></label>
+                    <select id="certDuration">
+                        <option value="">اختر المدة...</option>
+                        <option value="يوم واحد">يوم واحد</option>
+                        <option value="يومان">يومان</option>
+                        <option value="3 أيام">3 أيام</option>
+                        <option value="4 أيام">4 أيام</option>
+                        <option value="5 أيام">5 أيام</option>
+                        <option value="أسبوع واحد">أسبوع واحد</option>
+                        <option value="أسبوعان">أسبوعان</option>
+                        <option value="3 أسابيع">3 أسابيع</option>
+                        <option value="4 أسابيع">4 أسابيع</option>
+                        <option value="5 أسابيع">5 أسابيع</option>
+                        <option value="6 أسابيع">6 أسابيع</option>
+                        <option value="7 أسابيع">7 أسابيع</option>
+                        <option value="8 أسابيع">8 أسابيع</option>
+                        <option value="شهر واحد">شهر واحد</option>
+                        <option value="شهران">شهران</option>
+                        <option value="3 أشهر">3 أشهر</option>
+                        <option value="4 أشهر">4 أشهر</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>تاريخ الإصدار <span style="color:var(--danger)">*</span></label>
+                    <input type="date" id="certDate">
+                </div>
+                <div class="form-group">
+                    <label>حالة الشهادة</label>
+                    <select id="certStatus">
+                        <option value="موثقة">موثقة</option>
+                        <option value="معلقة">معلقة</option>
+                        <option value="ملغاة">ملغاة</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+                <button class="btn btn-primary" onclick="saveCertificate()">
+                    <i class="fas fa-save"></i> حفظ الشهادة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal" style="max-width:400px;">
+            <div class="modal-body" style="text-align:center; padding:2rem;">
+                <i class="fas fa-exclamation-triangle" style="font-size:3rem; color:var(--danger); margin-bottom:1rem;"></i>
+                <h3 style="margin-bottom:0.5rem;">تأكيد الحذف</h3>
+                <p style="color:var(--text-secondary);">هل أنت متأكد من حذف هذه الشهادة؟ لا يمكن التراجع عن هذا الإجراء.</p>
+                <div style="display:flex; gap:10px; justify-content:center; margin-top:1.5rem;">
+                    <button class="btn btn-secondary" onclick="closeDeleteModal()">إلغاء</button>
+                    <button class="btn btn-danger" onclick="confirmDelete()">
+                        <i class="fas fa-trash"></i> حذف
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Course Modal -->
+    <div class="modal-overlay" id="courseModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="courseModalTitle">إضافة كورس جديد</h2>
+                <button class="modal-close" onclick="closeCourseModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>اسم الكورس <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="courseName" placeholder="أدخل اسم الكورس">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCourseModal()">إلغاء</button>
+                <button class="btn btn-primary" onclick="saveCourse()">
+                    <i class="fas fa-save"></i> حفظ الكورس
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Delete Confirm Modal -->
+    <div class="modal-overlay" id="courseDeleteModal">
+        <div class="modal" style="max-width:400px;">
+            <div class="modal-body" style="text-align:center; padding:2rem;">
+                <i class="fas fa-exclamation-triangle" style="font-size:3rem; color:var(--danger); margin-bottom:1rem;"></i>
+                <h3 style="margin-bottom:0.5rem;">تأكيد الحذف</h3>
+                <p style="color:var(--text-secondary);">هل أنت متأكد من حذف هذا الكورس؟ لا يمكن التراجع عن هذا الإجراء.</p>
+                <div style="display:flex; gap:10px; justify-content:center; margin-top:1.5rem;">
+                    <button class="btn btn-secondary" onclick="closeCourseDeleteModal()">إلغاء</button>
+                    <button class="btn btn-danger" onclick="confirmCourseDelete()">
+                        <i class="fas fa-trash"></i> حذف
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="qrModal">
+        <div class="modal" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-qrcode"></i> QR و رابط الشهادة</h2>
+                <button class="modal-close" onclick="closeQRModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body qr-modal-body">
+                <div class="cert-badge"><i class="fas fa-certificate"></i></div>
+                <h3 id="qrCertName" style="color: var(--text-primary); margin-bottom: 0.3rem;">-</h3>
+                <p id="qrCertId" style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">-</p>
+                <div class="qr-display" id="qrDisplay"></div>
+                <p style="color: var(--text-muted); font-size: 0.8rem;">امسح الكود للتحقق من صحة الشهادة</p>
+                <div class="cert-link-box">
+                    <i class="fas fa-link" style="color: var(--primary-light);"></i>
+                    <input type="text" id="qrCertLink" readonly value="">
+                    <button onclick="copyCertLink()"><i class="fas fa-copy"></i> نسخ</button>
+                </div>
+                <div class="qr-cert-info">
+                    <p><strong>الكورس:</strong> <span id="qrCertCourse">-</span></p>
+                    <p><strong>تاريخ الإصدار:</strong> <span id="qrCertDate">-</span></p>
+                </div>
+                <button class="btn btn-primary" style="margin-top: 1rem; width: 100%; justify-content: center;" onclick="downloadQRImage()">
+                    <i class="fas fa-download"></i> تحميل QR كصورة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ============================================================
+    // SUPABASE CONFIG
+    // ============================================================
+    const SUPABASE_URL = 'https://ajbjypvxdeayfxfzwnil.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqYmp5cHZ4ZGVheWZ4Znp3bmlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMzg1NDAsImV4cCI6MjA5NjYxNDU0MH0.1uPlwCRWZjyTc15IJZBnYirF2NZ3vxKF3OFPTaIH1N0';
+    const TABLE = 'certificates';
+
+    const HEADERS = {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Prefer': 'return=representation'
+    };
+
+    // ============================================================
+    // USERS (local auth only)
+    // ============================================================
+    const USERS = [
+        { username: 'admin', password: 'CreativeSudani2026!', role: 'superadmin', name: 'المدير العام' },
+        { username: 'Moazar', password: '123Moazar890', role: 'admin', name: 'Moazar' }
+    ];
+
+    let certificates = [];
+    let currentEditId = null;
+    let deleteTargetId = null;
+    let isAdmin = false;
+    let currentUser = null;
+    let currentResultCert = null;
+
+    // ============================================================
+    // COURSES (local storage)
+    // ============================================================
+    const COURSES_KEY = 'cs_courses_list';
+    const DEFAULT_COURSES = [
+        'التصميم الجرافيكي باستخدام Canva',
+        'كتابة المحتوى الاحترافي',
+        'التسويق الإلكتروني المتقدم',
+        'إدارة وسائل التواصل الاجتماعي',
+        'تصميم الهوية البصرية',
+        'التصوير والمونتاج'
+    ];
+    let courses = [];
+    let currentEditCourse = null;
+    let deleteTargetCourse = null;
+
+    // ============================================================
+    // SUPABASE API HELPERS
+    // ============================================================
+    async function sbFetch(path, options = {}) {
+        const url = SUPABASE_URL + '/rest/v1/' + path;
+        const res = await fetch(url, { ...options, headers: { ...HEADERS, ...(options.headers || {}) } });
+        if (!res.ok) {
+            const err = await res.text();
+            throw new Error(err);
+        }
+        const text = await res.text();
+        return text ? JSON.parse(text) : null;
+    }
+
+    async function loadFromSupabase() {
+        setSyncStatus('syncing');
+        const data = await sbFetch(TABLE + '?order=created_at.desc');
+        certificates = (data || []).map(row => ({
+            id: row.cert_id,
+            name: row.name,
+            course: row.course,
+            duration: row.duration,
+            date: row.issue_date,
+            status: row.status,
+            verifyUrl: row.verify_url || ''
+        }));
+        setSyncStatus('synced');
+        return certificates;
+    }
+
+    async function insertToSupabase(cert) {
+        setSyncStatus('syncing');
+        const row = {
+            cert_id: cert.id,
+            name: cert.name,
+            course: cert.course,
+            duration: cert.duration,
+            issue_date: cert.date,
+            status: cert.status,
+            verify_url: cert.verifyUrl || getCertLink(cert.id)
+        };
+        const res = await sbFetch(TABLE, {
+            method: 'POST',
+            body: JSON.stringify(row)
+        });
+        setSyncStatus('synced');
+        return res;
+    }
+
+    async function updateInSupabase(certId, cert) {
+        setSyncStatus('syncing');
+        const row = {
+            name: cert.name,
+            course: cert.course,
+            duration: cert.duration,
+            issue_date: cert.date,
+            status: cert.status,
+            verify_url: cert.verifyUrl || getCertLink(cert.id)
+        };
+        await sbFetch(TABLE + '?cert_id=eq.' + encodeURIComponent(certId), {
+            method: 'PATCH',
+            body: JSON.stringify(row)
+        });
+        setSyncStatus('synced');
+    }
+
+    async function deleteFromSupabase(certId) {
+        setSyncStatus('syncing');
+        await sbFetch(TABLE + '?cert_id=eq.' + encodeURIComponent(certId), {
+            method: 'DELETE',
+            headers: { 'Prefer': 'return=minimal' }
+        });
+        setSyncStatus('synced');
+    }
+
+    // ============================================================
+    // SYNC STATUS UI
+    // ============================================================
+    function setSyncStatus(status) {
+        const el = document.getElementById('syncIndicator');
+        if (!el) return;
+        if (status === 'synced') {
+            el.className = 'sync-indicator synced';
+            el.innerHTML = '<span class="sync-dot"></span> Supabase متصل';
+        } else if (status === 'syncing') {
+            el.className = 'sync-indicator syncing';
+            el.innerHTML = '<span class="sync-dot"></span> جاري المزامنة...';
+        } else {
+            el.className = 'sync-indicator error';
+            el.innerHTML = '<span class="sync-dot"></span> خطأ في الاتصال';
+        }
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    async function initApp() {
+        loadCourses();
+        document.getElementById('dbLoading').classList.remove('hide');
+        try {
+            await loadFromSupabase();
+            showToast('تم الاتصال بـ Supabase بنجاح', 'success');
+        } catch (e) {
+            setSyncStatus('error');
+            showToast('تعذّر الاتصال بـ Supabase: ' + e.message, 'error');
+            // Fallback: show empty
+            certificates = [];
+        }
+        document.getElementById('dbLoading').classList.add('hide');
+        handleUrlHash();
+    }
+
+    async function refreshFromDB() {
+        showToast('جاري التحديث من السحابة...', 'info');
+        try {
+            await loadFromSupabase();
+            refreshAdminTable();
+            updateStats();
+            showToast('تم التحديث من Supabase', 'success');
+        } catch (e) {
+            showToast('خطأ: ' + e.message, 'error');
+        }
+    }
+
+    // ============================================================
+    // VERIFY RESULT ACTIONS (print / copy link / download QR)
+    // ============================================================
+    function printVerifyResult() {
+        if (!currentResultCert) return;
+        window.print();
+    }
+
+    function copyVerifyLink() {
+        if (!currentResultCert) return;
+        const link = getCertLink(currentResultCert.id);
+        const fallbackCopy = () => {
+            const tmp = document.createElement('input');
+            tmp.value = link;
+            document.body.appendChild(tmp);
+            tmp.select();
+            document.execCommand('copy');
+            tmp.remove();
+            showToast('تم نسخ رابط التحقق', 'success');
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(link).then(() => {
+                showToast('تم نسخ رابط التحقق', 'success');
+            }).catch(fallbackCopy);
+        } else {
+            fallbackCopy();
+        }
+    }
+
+    function downloadResultQR() {
+        const canvas = document.querySelector('#resultQR canvas');
+        if (!canvas) { showToast('لم يتم العثور على QR', 'error'); return; }
+        const certId = (currentResultCert || {}).id || 'cert';
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = 'QR_' + certId + '.png';
+        a.click();
+        showToast('تم تحميل صورة QR', 'success');
+    }
+
+    // ============================================================
+    // NAVIGATION
+    // ============================================================
+    function showPage(page) {
+        document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+        if (page === 'verify') {
+            document.getElementById('page-verify').classList.add('active');
+            document.getElementById('nav-verify').classList.add('active');
+        } else if (page === 'admin' && isAdmin) {
+            document.getElementById('page-admin').classList.add('active');
+            document.getElementById('nav-admin').classList.add('active');
+            displayCurrentUser();
+            refreshAdminTable();
+            updateStats();
+            showAdminTab('certs');
+        }
+    }
+
+    // ============================================================
+    // ADMIN TABS
+    // ============================================================
+    function showAdminTab(tab) {
+        const certsView = document.getElementById('adminCertsView');
+        const coursesView = document.getElementById('adminCoursesView');
+        const certsTabBtn = document.getElementById('adminTabCerts');
+        const coursesTabBtn = document.getElementById('adminTabCourses');
+
+        if (tab === 'courses') {
+            certsView.style.display = 'none';
+            coursesView.style.display = 'block';
+            certsTabBtn.classList.remove('active');
+            coursesTabBtn.classList.add('active');
+            renderCoursesTable();
+        } else {
+            certsView.style.display = 'block';
+            coursesView.style.display = 'none';
+            coursesTabBtn.classList.remove('active');
+            certsTabBtn.classList.add('active');
+        }
+    }
+
+    // ============================================================
+    // COURSES MANAGEMENT (local storage)
+    // ============================================================
+    function loadCourses() {
+        try {
+            const stored = localStorage.getItem(COURSES_KEY);
+            if (stored) {
+                courses = JSON.parse(stored);
+            } else {
+                courses = [...DEFAULT_COURSES];
+                saveCourses();
+            }
+        } catch (e) {
+            courses = [...DEFAULT_COURSES];
+        }
+        if (!Array.isArray(courses)) courses = [...DEFAULT_COURSES];
+    }
+
+    function saveCourses() {
+        try {
+            localStorage.setItem(COURSES_KEY, JSON.stringify(courses));
+        } catch (e) { /* ignore */ }
+    }
+
+    function populateCourseSelect(selectedValue) {
+        const select = document.getElementById('certCourse');
+        const current = selectedValue !== undefined ? selectedValue : select.value;
+        select.innerHTML = '<option value="">اختر الكورس...</option>' +
+            courses.map(c => `<option value="${c}">${c}</option>`).join('');
+        if (current) select.value = current;
+    }
+
+    function renderCoursesTable() {
+        const tbody = document.getElementById('courseTableBody');
+        const emptyState = document.getElementById('coursesEmptyState');
+        const searchInput = document.getElementById('courseSearch');
+        const searchTerm = (searchInput ? searchInput.value : '').toLowerCase();
+
+        let filtered = courses;
+        if (searchTerm) {
+            filtered = courses.filter(c => c.toLowerCase().includes(searchTerm));
+        }
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        tbody.innerHTML = filtered.map(course => `
+            <tr>
+                <td><span class="course-tag"><i class="fas fa-book"></i> ${course}</span></td>
+                <td>
+                    <div class="table-actions">
+                        <button class="btn-edit" onclick="openEditCourseModal('${course.replace(/'/g, "\\'")}')" title="تعديل"><i class="fas fa-edit"></i></button>
+                        <button class="btn-delete" onclick="openCourseDeleteModal('${course.replace(/'/g, "\\'")}')" title="حذف"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function openAddCourseModal() {
+        currentEditCourse = null;
+        document.getElementById('courseModalTitle').textContent = 'إضافة كورس جديد';
+        document.getElementById('courseName').value = '';
+        document.getElementById('courseModal').classList.add('show');
+        setTimeout(() => document.getElementById('courseName').focus(), 100);
+    }
+
+    function openEditCourseModal(courseName) {
+        currentEditCourse = courseName;
+        document.getElementById('courseModalTitle').textContent = 'تعديل الكورس';
+        document.getElementById('courseName').value = courseName;
+        document.getElementById('courseModal').classList.add('show');
+        setTimeout(() => document.getElementById('courseName').focus(), 100);
+    }
+
+    function closeCourseModal() {
+        document.getElementById('courseModal').classList.remove('show');
+        currentEditCourse = null;
+    }
+
+    function saveCourse() {
+        const name = document.getElementById('courseName').value.trim();
+        if (!name) {
+            showToast('يرجى إدخال اسم الكورس', 'error');
+            return;
+        }
+
+        if (currentEditCourse === null) {
+            // Add new course
+            if (courses.includes(name)) {
+                showToast('هذا الكورس موجود مسبقاً', 'error');
+                return;
+            }
+            courses.push(name);
+            showToast('تم إضافة الكورس بنجاح', 'success');
+        } else {
+            // Edit existing course
+            if (name !== currentEditCourse && courses.includes(name)) {
+                showToast('هذا الكورس موجود مسبقاً', 'error');
+                return;
+            }
+            const idx = courses.indexOf(currentEditCourse);
+            if (idx !== -1) courses[idx] = name;
+            // Update any certificates already using the old course name (in-memory + table)
+            certificates.forEach(c => { if (c.course === currentEditCourse) c.course = name; });
+            showToast('تم تحديث الكورس بنجاح', 'success');
+        }
+
+        saveCourses();
+        renderCoursesTable();
+        populateCourseSelect();
+        refreshAdminTable();
+        closeCourseModal();
+    }
+
+    function openCourseDeleteModal(courseName) {
+        deleteTargetCourse = courseName;
+        document.getElementById('courseDeleteModal').classList.add('show');
+    }
+
+    function closeCourseDeleteModal() {
+        document.getElementById('courseDeleteModal').classList.remove('show');
+        deleteTargetCourse = null;
+    }
+
+    function confirmCourseDelete() {
+        if (!deleteTargetCourse) return;
+        courses = courses.filter(c => c !== deleteTargetCourse);
+        saveCourses();
+        renderCoursesTable();
+        populateCourseSelect();
+        showToast('تم حذف الكورس بنجاح', 'success');
+        closeCourseDeleteModal();
+    }
+
+    // ============================================================
+    // SEARCH & DISPLAY
+    // ============================================================
+    async function searchCertificate() {
+        const query = document.getElementById('certSearchInput').value.trim().toUpperCase();
+        if (!query) { showToast('يرجى إدخال رقم الشهادة', 'error'); return; }
+
+        const btn = document.querySelector('.search-btn');
+        btn.innerHTML = '<div class="spinner"></div> جاري البحث...';
+        btn.disabled = true;
+
+        // Always fetch fresh from Supabase
+        try {
+            await loadFromSupabase();
+        } catch(e) { /* use cached */ }
+
+        btn.innerHTML = '<i class="fas fa-check-circle"></i> تحقق من الشهادة';
+        btn.disabled = false;
+
+        const cert = certificates.find(c => c.id.toUpperCase() === query);
+        const resultDiv = document.getElementById('certResult');
+        const notFoundDiv = document.getElementById('notFound');
+
+        if (cert && cert.status === 'موثقة') {
+            notFoundDiv.classList.remove('show');
+            currentResultCert = cert;
+            displayCertificate(cert);
+            resultDiv.classList.add('show');
+        } else {
+            currentResultCert = null;
+            resultDiv.classList.remove('show');
+            notFoundDiv.classList.add('show');
+        }
+    }
+
+    function displayCertificate(cert) {
+        document.getElementById('resName').textContent = cert.name;
+        document.getElementById('resId').textContent = cert.id;
+        document.getElementById('resCourse').textContent = cert.course;
+        document.getElementById('resDate').textContent = cert.date;
+
+        const statusBadge = document.getElementById('resStatusBadge');
+        const statusIcon = cert.status === 'موثقة' ? 'check' : cert.status === 'ملغاة' ? 'times' : 'clock';
+        statusBadge.innerHTML = '<i class="fas fa-' + statusIcon + '"></i> ' + cert.status;
+        statusBadge.style.background = cert.status === 'موثقة' ? 'rgba(0,184,148,0.15)' : cert.status === 'ملغاة' ? 'rgba(225,112,85,0.15)' : 'rgba(253,203,110,0.15)';
+        statusBadge.style.color = cert.status === 'موثقة' ? 'var(--success)' : cert.status === 'ملغاة' ? 'var(--danger)' : 'var(--warning)';
+
+        const verifyUrl = getCertLink(cert.id);
+        const linkEl = document.getElementById('resLink');
+        linkEl.textContent = verifyUrl;
+        linkEl.href = verifyUrl;
+
+        const qrContainer = document.getElementById('resultQR');
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+            text: verifyUrl,
+            width: 72,
+            height: 72,
+            colorDark: '#0D1B2A',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+
+    // ============================================================
+    // AUTH
+    // ============================================================
+    function showAdminLogin() {
+        if (isAdmin) { showPage('admin'); return; }
+        document.getElementById('loginModal').classList.add('show');
+        setTimeout(() => document.getElementById('loginUser').focus(), 100);
+    }
+
+    function doLogin() {
+        const user = document.getElementById('loginUser').value.trim();
+        const pass = document.getElementById('loginPass').value;
+        const foundUser = USERS.find(u => u.username === user && u.password === pass);
+        if (foundUser) {
+            isAdmin = true;
+            currentUser = foundUser;
+            document.getElementById('loginModal').classList.remove('show');
+            document.getElementById('loginUser').value = '';
+            document.getElementById('loginPass').value = '';
+            showPage('admin');
+            showToast('مرحباً ' + foundUser.name + '! تم تسجيل الدخول بنجاح', 'success');
+        } else {
+            showToast('اسم المستخدم أو كلمة المرور غير صحيحة', 'error');
+        }
+    }
+
+    function logout() {
+        isAdmin = false;
+        currentUser = null;
+        showPage('verify');
+        showToast('تم تسجيل الخروج', 'info');
+    }
+
+    function displayCurrentUser() {
+        if (currentUser) {
+            document.getElementById('currentUserDisplay').textContent = currentUser.name + ' (' + (currentUser.role === 'superadmin' ? 'مدير عام' : 'مدير') + ')';
+        }
+    }
+
+    // ============================================================
+    // CERT ID
+    // ============================================================
+    function generateCertId() {
+        const year = new Date().getFullYear();
+        const existing = certificates.filter(c => c.id.startsWith('CS-' + year));
+        const num = existing.length + 1;
+        return 'CS-' + year + '-' + String(num).padStart(3, '0');
+    }
+
+    function toggleManualId() {
+        const cb = document.getElementById('manualIdToggle');
+        const input = document.getElementById('certId');
+        const regenBtn = document.getElementById('regenIdBtn');
+        if (cb.checked) {
+            input.removeAttribute('readonly');
+            input.style.background = 'var(--bg-input)';
+            input.style.color = 'var(--text-primary)';
+            input.style.border = '2px solid var(--primary)';
+            input.focus();
+            regenBtn.style.display = 'none';
+        } else {
+            input.setAttribute('readonly', true);
+            input.style.background = 'rgba(30,144,255,0.1)';
+            input.style.color = 'var(--primary-light)';
+            input.style.border = '';
+            regenBtn.style.display = 'flex';
+            input.value = generateCertId();
+        }
+    }
+
+    function regenCertId() {
+        document.getElementById('certId').value = generateCertId();
+    }
+
+    // ============================================================
+    // ADD / EDIT MODAL
+    // ============================================================
+    function openAddModal() {
+        currentEditId = null;
+        document.getElementById('modalTitle').textContent = 'إضافة شهادة جديدة';
+        document.getElementById('certId').value = generateCertId();
+        document.getElementById('certName').value = '';
+        populateCourseSelect('');
+        document.getElementById('certDuration').value = '';
+        document.getElementById('certDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('certStatus').value = 'موثقة';
+        document.getElementById('manualIdToggle').checked = false;
+        document.getElementById('certId').setAttribute('readonly', true);
+        document.getElementById('certId').style.background = 'rgba(30,144,255,0.1)';
+        document.getElementById('certId').style.color = 'var(--primary-light)';
+        document.getElementById('regenIdBtn').style.display = 'flex';
+        document.getElementById('certModal').classList.add('show');
+    }
+
+    function openEditModal(certId) {
+        const cert = certificates.find(c => c.id === certId);
+        if (!cert) return;
+        currentEditId = certId;
+        document.getElementById('modalTitle').textContent = 'تعديل الشهادة';
+        document.getElementById('certId').value = cert.id;
+        document.getElementById('certName').value = cert.name;
+        populateCourseSelect(cert.course);
+        document.getElementById('certDuration').value = cert.duration;
+        document.getElementById('certDate').value = cert.date;
+        document.getElementById('certStatus').value = cert.status;
+        document.getElementById('manualIdToggle').checked = false;
+        document.getElementById('certId').setAttribute('readonly', true);
+        document.getElementById('certId').style.background = 'rgba(30,144,255,0.1)';
+        document.getElementById('certId').style.color = 'var(--primary-light)';
+        document.getElementById('regenIdBtn').style.display = 'flex';
+        document.getElementById('certModal').classList.add('show');
+    }
+
+    async function saveCertificate() {
+        const id = document.getElementById('certId').value.trim();
+        const name = document.getElementById('certName').value.trim();
+        const course = document.getElementById('certCourse').value;
+        const duration = document.getElementById('certDuration').value;
+        const date = document.getElementById('certDate').value;
+        const status = document.getElementById('certStatus').value;
+
+        if (!id || !name || !course || !duration || !date) {
+            showToast('يرجى ملء جميع الحقول المطلوبة', 'error');
+            return;
+        }
+
+        if (!currentEditId) {
+            const duplicate = certificates.find(c => c.id.trim().toUpperCase() === id.trim().toUpperCase());
+            if (duplicate) {
+                showToast('رقم الشهادة مستخدم مسبقاً، اختر رقماً آخر', 'error');
+                return;
+            }
+        }
+
+        const verifyUrl = getCertLink(id);
+        const certData = { id, name, course, duration, date, status, verifyUrl };
+
+        const saveBtn = document.querySelector('#certModal .btn-primary');
+        saveBtn.innerHTML = '<div class="spinner"></div> جاري الحفظ...';
+        saveBtn.disabled = true;
+
+        try {
+            if (currentEditId) {
+                await updateInSupabase(currentEditId, certData);
+                const idx = certificates.findIndex(c => c.id === currentEditId);
+                if (idx !== -1) certificates[idx] = certData;
+                showToast('تم تحديث الشهادة في Supabase بنجاح', 'success');
+            } else {
+                await insertToSupabase(certData);
+                certificates.unshift(certData);
+                showToast('تم إضافة الشهادة إلى Supabase بنجاح', 'success');
+            }
+            closeModal();
+            refreshAdminTable();
+            updateStats();
+        } catch (e) {
+            showToast('خطأ في الحفظ: ' + e.message, 'error');
+        }
+
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الشهادة';
+        saveBtn.disabled = false;
+    }
+
+    function closeModal() {
+        document.getElementById('certModal').classList.remove('show');
+        currentEditId = null;
+    }
+
+    // ============================================================
+    // DELETE
+    // ============================================================
+    function openDeleteModal(id) {
+        deleteTargetId = id;
+        document.getElementById('deleteModal').classList.add('show');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.remove('show');
+        deleteTargetId = null;
+    }
+
+    async function confirmDelete() {
+        if (!deleteTargetId) return;
+        try {
+            await deleteFromSupabase(deleteTargetId);
+            certificates = certificates.filter(c => c.id !== deleteTargetId);
+            showToast('تم حذف الشهادة من Supabase بنجاح', 'success');
+            refreshAdminTable();
+            updateStats();
+        } catch (e) {
+            showToast('خطأ في الحذف: ' + e.message, 'error');
+        }
+        closeDeleteModal();
+    }
+
+    // ============================================================
+    // TABLE
+    // ============================================================
+    function refreshAdminTable() {
+        const tbody = document.getElementById('certTableBody');
+        const emptyState = document.getElementById('emptyState');
+        const searchTerm = document.getElementById('adminSearch').value.toLowerCase();
+
+        let filtered = certificates;
+        if (searchTerm) {
+            filtered = certificates.filter(c =>
+                c.id.toLowerCase().includes(searchTerm) ||
+                c.name.toLowerCase().includes(searchTerm) ||
+                c.course.toLowerCase().includes(searchTerm)
+            );
+        }
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        tbody.innerHTML = filtered.map(cert => `
+            <tr>
+                <td><span class="cert-id">${cert.id}</span></td>
+                <td>${cert.name}</td>
+                <td><span class="course-tag"><i class="fas fa-book"></i> ${cert.course}</span></td>
+                <td>${cert.duration}</td>
+                <td>${cert.date}</td>
+                <td>
+                    <span class="status-badge" style="background:${cert.status==='موثقة'?'rgba(0,184,148,0.15)':cert.status==='ملغاة'?'rgba(225,112,85,0.15)':'rgba(253,203,110,0.15)'}; color:${cert.status==='موثقة'?'var(--success)':cert.status==='ملغاة'?'var(--danger)':'var(--warning)'};">
+                        <i class="fas fa-${cert.status==='موثقة'?'check':cert.status==='ملغاة'?'times':'clock'}"></i>
+                        ${cert.status}
+                    </span>
+                </td>
+                <td>
+                    <div class="table-actions">
+                        <button class="btn-view" onclick="showCertQR('${cert.id}')" title="QR"><i class="fas fa-qrcode"></i></button>
+                        <button class="btn-edit" onclick="openEditModal('${cert.id}')" title="تعديل"><i class="fas fa-edit"></i></button>
+                        <button class="btn-delete" onclick="openDeleteModal('${cert.id}')" title="حذف"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+                <td>
+                    <div class="table-actions">
+                        <button class="btn-view" onclick="viewCert('${cert.id}')" title="عرض"><i class="fas fa-eye"></i></button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function filterCertificates() { refreshAdminTable(); }
+
+    function updateStats() {
+        document.getElementById('statTotal').textContent = certificates.length;
+        document.getElementById('statActive').textContent = certificates.filter(c => c.status === 'موثقة').length;
+        document.getElementById('statTrainees').textContent = new Set(certificates.map(c => c.name)).size;
+        document.getElementById('statCourses').textContent = new Set(certificates.map(c => c.course)).size;
+    }
+
+    function viewCert(id) {
+        showPage('verify');
+        document.getElementById('certSearchInput').value = id;
+        searchCertificate();
+    }
+
+    // ============================================================
+    // IMPORT / EXPORT
+    // ============================================================
+    function exportData() {
+        const dataStr = JSON.stringify(certificates, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'creative_sudani_certs_' + new Date().toISOString().split('T')[0] + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('تم تصدير البيانات بنجاح', 'success');
+    }
+
+    function importData() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    if (!Array.isArray(data)) throw new Error('صيغة الملف غير صحيحة');
+                    showToast('جاري رفع ' + data.length + ' شهادة إلى Supabase...', 'info');
+                    let imported = 0;
+                    for (const cert of data) {
+                        try {
+                            await insertToSupabase(cert);
+                            imported++;
+                        } catch(e2) { /* skip duplicates */ }
+                    }
+                    await loadFromSupabase();
+                    refreshAdminTable();
+                    updateStats();
+                    showToast('تم استيراد ' + imported + ' شهادة إلى Supabase', 'success');
+                } catch(err) {
+                    showToast('خطأ في قراءة الملف: ' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    }
+
+    // ============================================================
+    // QR MODAL
+    // ============================================================
+    function showCertQR(certId) {
+        const cert = certificates.find(c => c.id === certId);
+        if (!cert) { showToast('الشهادة غير موجودة', 'error'); return; }
+
+        const link = getCertLink(certId);
+        document.getElementById('qrCertName').textContent = cert.name;
+        document.getElementById('qrCertId').textContent = cert.id;
+        document.getElementById('qrCertCourse').textContent = cert.course;
+        document.getElementById('qrCertDate').textContent = cert.date;
+        document.getElementById('qrCertLink').value = link;
+
+        const qrContainer = document.getElementById('qrDisplay');
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+            text: link,
+            width: 180,
+            height: 180,
+            colorDark: '#1E90FF',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        document.getElementById('qrModal').classList.add('show');
+    }
+
+    function closeQRModal() { document.getElementById('qrModal').classList.remove('show'); }
+
+    function copyCertLink() {
+        const input = document.getElementById('qrCertLink');
+        input.select();
+        navigator.clipboard.writeText(input.value).then(() => {
+            showToast('تم نسخ الرابط!', 'success');
+        }).catch(() => {
+            document.execCommand('copy');
+            showToast('تم نسخ الرابط!', 'success');
+        });
+    }
+
+    function downloadQRImage() {
+        const qrCanvas = document.querySelector('#qrDisplay canvas');
+        if (!qrCanvas) { showToast('لم يتم العثور على QR', 'error'); return; }
+        const link = document.createElement('a');
+        link.href = qrCanvas.toDataURL('image/png');
+        link.download = 'QR_' + document.getElementById('qrCertId').textContent + '.png';
+        link.click();
+        showToast('تم تحميل صورة QR', 'success');
+    }
+
+    // ============================================================
+    // UTILS
+    // ============================================================
+    function getCertLink(certId) {
+        const basePath = window.location.pathname.split('/').pop() || 'verify.html';
+        return window.location.origin + window.location.pathname.replace(/[^/]+$/, '') + basePath + '?cert=' + encodeURIComponent(certId);
+    }
+
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = 'toast ' + type;
+        const icons = { success: 'check-circle', error: 'times-circle', info: 'info-circle' };
+        toast.innerHTML = '<i class="fas fa-' + (icons[type] || 'info-circle') + '"></i> ' + message;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    function handleUrlHash() {
+        // Support both ?cert= and #cert=
+        const params = new URLSearchParams(window.location.search);
+        const certIdParam = params.get('cert');
+        const certIdHash = window.location.hash.startsWith('#cert=') ? window.location.hash.replace('#cert=', '') : null;
+        const certId = certIdParam || certIdHash;
+        if (certId) {
+            document.getElementById('certSearchInput').value = certId;
+            searchCertificate();
+        }
+    }
+
+    // ============================================================
+    // BOOT
+    // ============================================================
+    window.addEventListener('DOMContentLoaded', () => {
+        initApp();
+
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay && overlay.id !== 'deleteModal' && overlay.id !== 'courseDeleteModal') {
+                    overlay.classList.remove('show');
+                }
+            });
+        });
+
+        document.getElementById('qrModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('qrModal')) closeQRModal();
+        });
+
+        // Close modals on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeQRModal();
+            }
+        });
+
+        window.addEventListener('hashchange', handleUrlHash);
+    });
+    </script>
+</body>
+</html>
