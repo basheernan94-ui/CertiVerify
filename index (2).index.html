@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creative Sudani - نظام التحقق من الشهادات</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    /* =============================================
+       RESET & BASE
+    ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-main: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      --glass: rgba(255,255,255,0.05);
+      --glass-border: rgba(255,255,255,0.12);
+      --purple: #a78bfa;
+      --blue: #60a5fa;
+      --green: #6ee7b7;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --text: #e2e8f0;
+      --text-muted: rgba(255,255,255,0.5);
+      --text-dim: rgba(255,255,255,0.35);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg-main);
+      min-height: 100vh;
+      color: var(--text);
+    }
+
+    /* =============================================
+       NAVBAR
+    ============================================= */
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(15,12,41,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 0 24px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .navbar-brand {
+      font-size: 1.3rem; font-weight: 800;
+      background: linear-gradient(90deg, var(--purple), var(--blue));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-decoration: none;
+    }
+    .navbar-links { display: flex; gap: 8px; }
+    .nav-btn {
+      padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer;
+      font-size: 0.875rem; font-weight: 600; transition: all 0.2s;
+      background: transparent; color: var(--text-muted);
+    }
+    .nav-btn:hover { color: var(--text); background: var(--glass); }
+    .nav-btn.active { background: rgba(167,139,250,0.15); color: var(--purple); }
+
+    /* =============================================
+       STATUS BAR
+    ============================================= */
+    #status-bar {
+      text-align: center; padding: 8px 16px; font-size: 0.8rem;
+      background: rgba(16,185,129,0.1); color: #6ee7b7;
+      border-bottom: 1px solid rgba(16,185,129,0.2);
+      transition: all 0.3s;
+    }
+    #status-bar.error { background: rgba(239,68,68,0.1); color: var(--red); border-color: rgba(239,68,68,0.2); }
+    #status-bar.loading { background: rgba(96,165,250,0.1); color: var(--blue); border-color: rgba(96,165,250,0.2); }
+
+    /* =============================================
+       SECTIONS / VIEWS
+    ============================================= */
+    .view { display: none; padding: 32px 20px; max-width: 1000px; margin: 0 auto; }
+    .view.active { display: block; }
+
+    /* =============================================
+       VERIFY SECTION
+    ============================================= */
+    .verify-hero {
+      text-align: center; padding: 40px 20px 32px;
+    }
+    .verify-hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 12px; }
+    .verify-hero p { color: var(--text-muted); font-size: 1rem; max-width: 480px; margin: 0 auto 28px; }
+    .verify-input-row {
+      display: flex; gap: 10px; max-width: 480px; margin: 0 auto;
+    }
+    .verify-input-row input {
+      flex: 1; padding: 12px 16px; border-radius: 10px;
+      border: 1px solid var(--glass-border); background: var(--glass);
+      color: var(--text); font-size: 0.95rem; outline: none;
+      backdrop-filter: blur(8px);
+    }
+    .verify-input-row input:focus { border-color: var(--purple); }
+    .verify-input-row input::placeholder { color: var(--text-dim); }
+    .btn-verify {
+      padding: 12px 24px; border-radius: 10px; border: none; cursor: pointer;
+      background: linear-gradient(135deg, var(--purple), var(--blue));
+      color: #fff; font-weight: 700; font-size: 0.95rem; white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+    .btn-verify:hover { opacity: 0.85; }
+
+    /* result card */
+    .result-card {
+      margin-top: 28px; padding: 28px; border-radius: 16px;
+      background: var(--glass); border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px); display: none;
+    }
+    .result-card.show { display: block; }
+    .result-card.not-found { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05); }
+
+    .result-status-banner {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 18px; border-radius: 10px; margin-bottom: 24px;
+      font-weight: 700; font-size: 0.95rem;
+    }
+    .result-status-banner.ok  { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: var(--green); }
+    .result-status-banner.bad { background: rgba(239,68,68,0.12);  border: 1px solid rgba(239,68,68,0.3);  color: var(--red); }
+    .pulse-dot { width:10px;height:10px;border-radius:50%;animation:pulse 2s infinite; }
+    .ok .pulse-dot  { background: #10b981; }
+    .bad .pulse-dot { background: #ef4444; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+    @media(max-width:560px){ .result-grid{ grid-template-columns:1fr; } }
+    .result-field {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px; padding: 14px;
+    }
+    .result-field .label { font-size:0.72rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
+    .result-field .value { font-size:0.95rem; font-weight:600; }
+    .value.s-ok      { color: var(--green); }
+    .value.s-pending { color: var(--yellow); }
+    .value.s-revoked { color: var(--red); }
+
+    .result-qr-row {
+      display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;
+      border-top: 1px solid var(--glass-border); padding-top: 20px;
+    }
+    .qr-white-bg { background:#fff; padding:10px; border-radius:10px; flex-shrink:0; }
+    .qr-white-bg canvas, .qr-white-bg img { display:block; }
+    .qr-info { flex:1; min-width:180px; display:flex; flex-direction:column; gap:8px; }
+    .qr-info .label { font-size:.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; }
+    .qr-link {
+      background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+      border-radius:8px; padding:9px 12px; font-size:.8rem; color:#93c5fd;
+      word-break:break-all; font-family:monospace;
+    }
+    .btn-copy {
+      align-self:flex-start; padding:7px 16px; border-radius:7px; border:none; cursor:pointer;
+      background:rgba(167,139,250,0.15); border:1px solid rgba(167,139,250,0.3);
+      color:var(--purple); font-size:.83rem; transition:background .2s;
+    }
+    .btn-copy:hover { background:rgba(167,139,250,0.28); }
+    .btn-copy.copied { color:var(--green); border-color:rgba(16,185,129,.4); }
+    .result-actions { display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+    .btn-action {
+      padding:9px 20px; border-radius:8px; border:none; cursor:pointer; font-size:.85rem;
+      font-weight:600; transition:all .2s;
+    }
+    .btn-action.print { background:rgba(167,139,250,.15); border:1px solid rgba(167,139,250,.3); color:var(--purple); }
+    .btn-action.dl-qr { background:rgba(96,165,250,.15);  border:1px solid rgba(96,165,250,.3);  color:var(--blue); }
+    .btn-action:hover { opacity:.8; }
+    .result-footer {
+      margin-top:16px; text-align:center; font-size:.78rem; color:var(--text-dim);
+      border-top:1px solid var(--glass-border); padding-top:14px;
+    }
+
+    /* =============================================
+       ADMIN SECTION
+    ============================================= */
+    .admin-header {
+      display:flex; justify-content:space-between; align-items:center;
+      margin-bottom:24px; flex-wrap:wrap; gap:12px;
+    }
+    .admin-header h2 { font-size:1.4rem; font-weight:700; }
+    .admin-user-info { font-size:.82rem; color:var(--text-muted); display:flex; align-items:center; gap:12px; }
+    .btn-logout {
+      padding:6px 14px; border-radius:7px; border:none; cursor:pointer;
+      background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.3); color:var(--red);
+      font-size:.8rem; transition:background .2s;
+    }
+    .btn-logout:hover { background:rgba(239,68,68,.28); }
+
+    .storage-notice {
+      padding:12px 18px; border-radius:10px; margin-bottom:20px; font-size:.85rem;
+      background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.25); color:#a7f3d0;
+    }
+
+    .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+    @media(max-width:600px){ .stats-row{ grid-template-columns:1fr 1fr; } }
+    .stat-card {
+      background:var(--glass); border:1px solid var(--glass-border);
+      border-radius:12px; padding:18px; text-align:center;
+    }
+    .stat-card .stat-num { font-size:2rem; font-weight:800; background:linear-gradient(90deg,var(--purple),var(--blue)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .stat-card .stat-lbl { font-size:.78rem; color:var(--text-muted); margin-top:4px; }
+
+    .admin-tabs { display:flex; gap:6px; margin-bottom:20px; }
+    .admin-tab {
+      padding:9px 20px; border-radius:9px; border:none; cursor:pointer;
+      background:var(--glass); color:var(--text-muted); font-weight:600; font-size:.875rem;
+      transition:all .2s;
+    }
+    .admin-tab.active { background:rgba(167,139,250,.18); color:var(--purple); }
+
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+
+    .panel-actions { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+    .btn-sm {
+      padding:8px 16px; border-radius:8px; border:none; cursor:pointer; font-size:.83rem;
+      font-weight:600; transition:all .2s;
+    }
+    .btn-sm.primary { background:linear-gradient(135deg,var(--purple),var(--blue)); color:#fff; }
+    .btn-sm.secondary { background:var(--glass); border:1px solid var(--glass-border); color:var(--text-muted); }
+    .btn-sm.secondary:hover { color:var(--text); }
+    .btn-sm.danger { background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.3); color:var(--red); }
+
+    /* table */
+    .table-wrap { overflow-x:auto; border-radius:12px; border:1px solid var(--glass-border); }
+    table { width:100%; border-collapse:collapse; font-size:.85rem; }
+    thead tr { background:rgba(255,255,255,.04); }
+    th { padding:12px 14px; text-align:right; color:var(--text-dim); font-weight:600; font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+    td { padding:12px 14px; border-top:1px solid rgba(255,255,255,.05); vertical-align:middle; }
+    tr:hover td { background:rgba(255,255,255,.03); }
+    .badge {
+      display:inline-block; padding:3px 10px; border-radius:20px; font-size:.75rem; font-weight:700;
+    }
+    .badge.ok      { background:rgba(16,185,129,.15); color:var(--green); }
+    .badge.pending { background:rgba(251,191,36,.15);  color:var(--yellow); }
+    .badge.revoked { background:rgba(239,68,68,.15);   color:var(--red); }
+
+    .btn-icon {
+      padding:5px 10px; border-radius:6px; border:none; cursor:pointer; font-size:.75rem;
+      transition:all .2s; margin-left:4px;
+    }
+    .btn-icon.edit   { background:rgba(96,165,250,.15); color:var(--blue); }
+    .btn-icon.del    { background:rgba(239,68,68,.15);  color:var(--red); }
+    .btn-icon.qr     { background:rgba(167,139,250,.15); color:var(--purple); }
+    .btn-icon:hover  { opacity:.7; }
+
+    .empty-state { text-align:center; padding:40px; color:var(--text-muted); }
+    .empty-state .icon { font-size:2.5rem; margin-bottom:10px; }
+
+    /* =============================================
+       MODALS
+    ============================================= */
+    .modal-overlay {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.65);
+      backdrop-filter:blur(6px); z-index:200; align-items:center; justify-content:center; padding:20px;
+    }
+    .modal-overlay.show { display:flex; }
+    .modal {
+      background:#1e1b3a; border:1px solid var(--glass-border); border-radius:16px;
+      padding:28px; max-width:480px; width:100%; animation:modalIn .2s ease;
+    }
+    @keyframes modalIn { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:none} }
+    .modal h3 { font-size:1.2rem; font-weight:700; margin-bottom:20px; }
+    .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:22px; }
+    .form-group { margin-bottom:14px; }
+    .form-group label { display:block; font-size:.8rem; color:var(--text-muted); margin-bottom:5px; }
+    .form-group input, .form-group select {
+      width:100%; padding:10px 14px; border-radius:9px;
+      border:1px solid var(--glass-border); background:rgba(255,255,255,.06);
+      color:var(--text); font-size:.9rem; outline:none;
+    }
+    .form-group input:focus, .form-group select:focus { border-color:var(--purple); }
+    .form-group select option { background:#1e1b3a; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media(max-width:420px){ .form-row{ grid-template-columns:1fr; } }
+
+    /* QR modal */
+    .qr-modal-content { text-align:center; }
+    .qr-modal-content h4 { font-size:1.1rem; font-weight:700; margin-bottom:6px; }
+    .qr-modal-content p { font-size:.82rem; color:var(--text-muted); margin-bottom:18px; }
+    #modal-qr-box { display:inline-block; background:#fff; padding:12px; border-radius:10px; margin-bottom:14px; }
+    .qr-modal-link {
+      background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+      border-radius:8px; padding:9px 12px; font-size:.78rem; color:#93c5fd;
+      word-break:break-all; font-family:monospace; margin-bottom:14px; text-align:right;
+    }
+    .qr-modal-meta { display:flex; gap:16px; justify-content:center; font-size:.82rem; color:var(--text-muted); }
+    .qr-modal-meta span strong { color:var(--text); }
+
+    /* confirm modal */
+    #confirm-modal .modal { max-width:380px; }
+    #confirm-modal p { color:var(--text-muted); font-size:.9rem; margin-top:-8px; margin-bottom:0; }
+
+    /* =============================================
+       LOGIN
+    ============================================= */
+    #login-view {
+      display:none; position:fixed; inset:0; background:rgba(15,12,41,.95);
+      backdrop-filter:blur(20px); z-index:150; align-items:center; justify-content:center; padding:20px;
+    }
+    #login-view.show { display:flex; }
+    .login-box {
+      background:#1e1b3a; border:1px solid var(--glass-border); border-radius:20px;
+      padding:36px; max-width:380px; width:100%; text-align:center;
+    }
+    .login-box h2 { font-size:1.5rem; font-weight:800; margin-bottom:6px; }
+    .login-box p { color:var(--text-muted); font-size:.875rem; margin-bottom:24px; }
+    .login-box .form-group { text-align:right; }
+    .btn-login {
+      width:100%; padding:12px; border-radius:10px; border:none; cursor:pointer;
+      background:linear-gradient(135deg,var(--purple),var(--blue));
+      color:#fff; font-size:1rem; font-weight:700; margin-top:8px; transition:opacity .2s;
+    }
+    .btn-login:hover { opacity:.85; }
+    .login-error { color:var(--red); font-size:.83rem; margin-top:10px; display:none; }
+
+    /* =============================================
+       TOAST
+    ============================================= */
+    #toast {
+      position:fixed; bottom:24px; right:24px; z-index:999;
+      padding:12px 20px; border-radius:10px; font-size:.875rem; font-weight:600;
+      opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none;
+    }
+    #toast.show { opacity:1; transform:none; }
+    #toast.success { background:rgba(16,185,129,.9); color:#fff; }
+    #toast.error   { background:rgba(239,68,68,.9);  color:#fff; }
+    #toast.info    { background:rgba(96,165,250,.9);  color:#fff; }
+  </style>
+</head>
+<body>
+
+<!-- =============================================
+     NAVBAR
+============================================= -->
+<nav class="navbar">
+  <a class="navbar-brand" href="#">Creative Sudani</a>
+  <div class="navbar-links">
+    <button class="nav-btn active" id="btn-nav-verify" onclick="showView('verify')">التحقق من الشهادات</button>
+    <button class="nav-btn" id="btn-nav-admin" onclick="requireAdmin()">لوحة الإدارة</button>
+  </div>
+</nav>
+
+<!-- STATUS BAR -->
+<div id="status-bar" class="loading">جاري الاتصال بقاعدة البيانات...</div>
+
+<!-- =============================================
+     VIEW: VERIFY
+============================================= -->
+<div id="view-verify" class="view active">
+  <div class="verify-hero">
+    <h1>التحقق من الشهادات</h1>
+    <p>أدخل رقم الشهادة للتحقق من صحتها والاطلاع على تفاصيلها الكاملة. جميع الشهادات الصادرة من منصة Creative Sudani موثقة رقمياً.</p>
+    <div class="verify-input-row">
+      <input type="text" id="verify-input" placeholder="مثال: CS-2026-001" />
+      <button class="btn-verify" onclick="verifyCert()">تحقق من الشهادة</button>
+    </div>
+  </div>
+
+  <!-- result -->
+  <div id="result-card" class="result-card">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<!-- =============================================
+     VIEW: ADMIN
+============================================= -->
+<div id="view-admin" class="view">
+  <div class="admin-header">
+    <h2>لوحة تحكم الإدارة</h2>
+    <div class="admin-user-info">
+      <span>المستخدم الحالي: <strong id="admin-username">-</strong> &nbsp;•&nbsp; Supabase متصل</span>
+      <button class="btn-logout" onclick="logout()">تسجيل الخروج</button>
+    </div>
+  </div>
+
+  <div class="storage-notice">
+    <strong>تخزين سحابي مُفعَّل (Supabase):</strong> جميع التغييرات تُحفظ <strong>فوراً في قاعدة البيانات السحابية</strong> وتظهر على جميع الأجهزة تلقائياً.
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-lbl">إجمالي الشهادات</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-verified">0</div><div class="stat-lbl">الشهادات الموثقة</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-students">0</div><div class="stat-lbl">عدد المتدربين</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-courses">0</div><div class="stat-lbl">عدد الكورسات</div></div>
+  </div>
+
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="switchTab('certs')">إدارة الشهادات</button>
+    <button class="admin-tab" onclick="switchTab('courses')">إدارة الكورسات</button>
+  </div>
+
+  <!-- CERTS TAB -->
+  <div id="tab-certs" class="tab-panel active">
+    <div class="panel-actions">
+      <button class="btn-sm primary" onclick="openAddCert()">إضافة شهادة جديدة</button>
+      <button class="btn-sm secondary" onclick="exportJSON()">تصدير JSON</button>
+      <button class="btn-sm secondary" onclick="document.getElementById('import-input').click()">استيراد JSON</button>
+      <input type="file" id="import-input" accept=".json" style="display:none" onchange="importJSON(event)" />
+      <button class="btn-sm secondary" onclick="loadCerts()">تحديث من السحابة</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>رقم الشهادة</th>
+            <th>اسم المتدرب</th>
+            <th>الكورس</th>
+            <th>المدة</th>
+            <th>تاريخ الإصدار</th>
+            <th>الحالة</th>
+            <th>QR / لينك</th>
+            <th>الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="certs-tbody">
+          <tr><td colspan="8"><div class="empty-state"><div class="icon">📋</div>جاري التحميل...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- COURSES TAB -->
+  <div id="tab-courses" class="tab-panel">
+    <div class="panel-actions">
+      <button class="btn-sm primary" onclick="openAddCourse()">إضافة كورس جديد</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>اسم الكورس</th><th>الإجراءات</th></tr></thead>
+        <tbody id="courses-tbody">
+          <tr><td colspan="2"><div class="empty-state"><div class="icon">📚</div>لا توجد كورسات</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================
+     LOGIN OVERLAY
+============================================= -->
+<div id="login-view">
+  <div class="login-box">
+    <h2>لوحة الإدارة</h2>
+    <p>أدخل بيانات الدخول للوصول إلى لوحة الإدارة</p>
+    <div class="form-group">
+      <label>اسم المستخدم</label>
+      <input type="text" id="login-user" placeholder="admin" />
+    </div>
+    <div class="form-group">
+      <label>كلمة المرور</label>
+      <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()" />
+    </div>
+    <button class="btn-login" onclick="doLogin()">دخول</button>
+    <div class="login-error" id="login-error">اسم المستخدم أو كلمة المرور غير صحيحة</div>
+  </div>
+</div>
+
+<!-- =============================================
+     MODAL: ADD / EDIT CERT
+============================================= -->
+<div class="modal-overlay" id="cert-modal">
+  <div class="modal">
+    <h3 id="cert-modal-title">إضافة شهادة جديدة</h3>
+    <input type="hidden" id="cert-edit-id" />
+    <div class="form-row">
+      <div class="form-group">
+        <label>رقم الشهادة *</label>
+        <input type="text" id="f-cert-number" placeholder="CS-2026-001" />
+      </div>
+      <div class="form-group">
+        <label>اسم المتدرب *</label>
+        <input type="text" id="f-student-name" placeholder="أحمد محمد" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>اسم الكورس *</label>
+        <select id="f-course-name">
+          <option value="">اختر الكورس...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>مدة الكورس *</label>
+        <select id="f-duration">
+          <option value="">اختر المدة...</option>
+          <option>يوم واحد</option><option>يومان</option><option>3 أيام</option>
+          <option>4 أيام</option><option>5 أيام</option><option>أسبوع واحد</option>
+          <option>أسبوعان</option><option>3 أسابيع</option><option>4 أسابيع</option>
+          <option>5 أسابيع</option><option>6 أسابيع</option><option>7 أسابيع</option>
+          <option>8 أسابيع</option><option>شهر واحد</option><option>شهران</option>
+          <option>3 أشهر</option><option>4 أشهر</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>تاريخ الإصدار *</label>
+        <input type="date" id="f-issue-date" />
+      </div>
+      <div class="form-group">
+        <label>حالة الشهادة</label>
+        <select id="f-status">
+          <option value="موثقة">موثقة</option>
+          <option value="معلقة">معلقة</option>
+          <option value="ملغاة">ملغاة</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm secondary" onclick="closeModal('cert-modal')">إلغاء</button>
+      <button class="btn-sm primary" onclick="saveCert()">حفظ الشهادة</button>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================
+     MODAL: ADD COURSE
+============================================= -->
+<div class="modal-overlay" id="course-modal">
+  <div class="modal">
+    <h3 id="course-modal-title">إضافة كورس جديد</h3>
+    <input type="hidden" id="course-edit-id" />
+    <div class="form-group">
+      <label>اسم الكورس *</label>
+      <input type="text" id="f-course-name-field" placeholder="تصميم جرافيك" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm secondary" onclick="closeModal('course-modal')">إلغاء</button>
+      <button class="btn-sm primary" onclick="saveCourse()">حفظ الكورس</button>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================
+     MODAL: QR
+============================================= -->
+<div class="modal-overlay" id="qr-modal">
+  <div class="modal">
+    <h3>QR و رابط الشهادة</h3>
+    <div class="qr-modal-content">
+      <h4 id="qr-modal-name">-</h4>
+      <p id="qr-modal-cert">-</p>
+      <div id="modal-qr-box"></div>
+      <p style="font-size:.75rem;color:var(--text-dim);margin-bottom:8px;">امسح الكود للتحقق من صحة الشهادة</p>
+      <div class="qr-modal-link" id="qr-modal-link">-</div>
+      <button class="btn-sm secondary" style="margin-bottom:12px" onclick="copyQRLink()">نسخ</button>
+      <div class="qr-modal-meta">
+        <span><strong id="qr-modal-course">-</strong> : الكورس</span>
+        <span><strong id="qr-modal-date">-</strong> : تاريخ الإصدار</span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm secondary" onclick="downloadQR()">تحميل QR كصورة</button>
+      <button class="btn-sm primary" onclick="closeModal('qr-modal')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================
+     MODAL: CONFIRM DELETE
+============================================= -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="max-width:360px">
+    <h3 id="confirm-title">تأكيد الحذف</h3>
+    <p id="confirm-msg">هل أنت متأكد؟ لا يمكن التراجع.</p>
+    <div class="modal-actions">
+      <button class="btn-sm secondary" onclick="closeModal('confirm-modal')">إلغاء</button>
+      <button class="btn-sm danger" id="confirm-ok-btn">حذف</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- =============================================
+     JAVASCRIPT
+============================================= -->
+<script>
+/* ===================================================
+   CONFIG — Supabase
+=================================================== */
+const SUPA_URL = 'https://pgikivkbhkjkszjnqgxv.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnaWtpdmtiaGtqa3N6am5xZ3h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc1OTIyNjQsImV4cCI6MjA2MzE2ODI2NH0.3HyMj0dQZPh5aQiVfHIFMKERxnlAGi-SP03P79BIMCU';
+
+/* admin credentials (adjust as needed) */
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'admin123';
+
+/* Table names — *** change if your Supabase tables differ *** */
+const TBL_CERTS   = 'certificates';
+const TBL_COURSES = 'courses';
+
+/* ===================================================
+   INIT
+=================================================== */
+let sb;          // supabase client
+let isAdmin = false;
+let allCerts   = [];
+let allCourses = [];
+
+(async () => {
+  try {
+    sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+    setStatus('Supabase متصل ✓', 'ok');
+    await loadCourses();
+    await loadCerts();
+  } catch(e) {
+    setStatus('تعذّر الاتصال بـ Supabase — ' + e.message, 'error');
+  }
+})();
+
+function setStatus(msg, type='ok') {
+  const bar = document.getElementById('status-bar');
+  bar.textContent = msg;
+  bar.className = type === 'ok' ? '' : type;
+}
+
+/* ===================================================
+   NAVIGATION
+=================================================== */
+function showView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + v).classList.add('active');
+  document.getElementById('btn-nav-' + v).classList.add('active');
+}
+
+function requireAdmin() {
+  if (isAdmin) { showView('admin'); return; }
+  document.getElementById('login-view').classList.add('show');
+}
+
+function logout() {
+  isAdmin = false;
+  sessionStorage.removeItem('cs_admin');
+  showView('verify');
+  toast('تم تسجيل الخروج', 'info');
+}
+
+/* ===================================================
+   LOGIN
+=================================================== */
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  if (u === ADMIN_USER && p === ADMIN_PASS) {
+    isAdmin = true;
+    sessionStorage.setItem('cs_admin', '1');
+    document.getElementById('login-view').classList.remove('show');
+    document.getElementById('admin-username').textContent = u;
+    showView('admin');
+    document.getElementById('login-error').style.display = 'none';
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+
+// restore session
+if (sessionStorage.getItem('cs_admin')) {
+  isAdmin = true;
+  document.getElementById('admin-username').textContent = ADMIN_USER;
+}
+
+/* ===================================================
+   SUPABASE — LOAD DATA
+=================================================== */
+async function loadCerts() {
+  try {
+    const { data, error } = await sb.from(TBL_CERTS).select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    allCerts = data || [];
+    renderCertsTable();
+    updateStats();
+  } catch(e) {
+    console.error('loadCerts:', e.message);
+    toast('خطأ في تحميل الشهادات: ' + e.message, 'error');
+  }
+}
+
+async function loadCourses() {
+  try {
+    const { data, error } = await sb.from(TBL_COURSES).select('*').order('name');
+    if (error) throw error;
+    allCourses = data || [];
+    renderCoursesTable();
+    populateCourseDropdown();
+  } catch(e) {
+    console.error('loadCourses:', e.message);
+    // non-fatal — courses table may not exist yet
+  }
+}
+
+/* ===================================================
+   STATS
+=================================================== */
+function updateStats() {
+  document.getElementById('stat-total').textContent     = allCerts.length;
+  document.getElementById('stat-verified').textContent  = allCerts.filter(c => c.status === 'موثقة').length;
+  document.getElementById('stat-students').textContent  = new Set(allCerts.map(c => c.student_name)).size;
+  document.getElementById('stat-courses').textContent   = allCourses.length || new Set(allCerts.map(c => c.course_name)).size;
+}
+
+/* ===================================================
+   VERIFY LOGIC
+=================================================== */
+async function verifyCert() {
+  const num = document.getElementById('verify-input').value.trim();
+  if (!num) { toast('أدخل رقم الشهادة أولاً', 'error'); return; }
+
+  const card = document.getElementById('result-card');
+  card.className = 'result-card show';
+  card.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted)">جاري البحث...</div>';
+
+  try {
+    const { data, error } = await sb
+      .from(TBL_CERTS)
+      .select('*')
+      .eq('cert_number', num)
+      .maybeSingle();
+    if (error) throw error;
+
+    if (!data) {
+      renderNotFound(card, num);
+    } else {
+      renderCertResult(card, data);
+    }
+  } catch(e) {
+    card.innerHTML = `<div style="text-align:center;padding:30px;color:var(--red)">خطأ: ${e.message}</div>`;
+  }
+}
+
+// also handle ?cert= in URL on load
+window.addEventListener('DOMContentLoaded', () => {
+  const p = new URLSearchParams(location.search).get('cert');
+  if (p) {
+    document.getElementById('verify-input').value = p;
+    verifyCert();
+  }
+});
+
+// Enter key in verify input
+document.getElementById('verify-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') verifyCert();
+});
+
+function verifyUrl(certNumber) {
+  return `${location.origin}/verify.html?cert=${encodeURIComponent(certNumber)}`;
+}
+
+function renderNotFound(card, num) {
+  card.className = 'result-card show not-found';
+  card.innerHTML = `
+    <div style="text-align:center;padding:20px">
+      <div style="font-size:3rem;margin-bottom:12px">✗</div>
+      <h3 style="color:var(--red);margin-bottom:8px">لم يتم العثور على الشهادة</h3>
+      <p style="color:var(--text-muted)">رقم الشهادة <strong style="color:var(--text)">${num}</strong> غير موجود في قاعدة البيانات.<br>يرجى التأكد من الرقم والمحاولة مرة أخرى.</p>
+    </div>`;
+}
+
+function renderCertResult(card, c) {
+  const url = verifyUrl(c.cert_number);
+  const statusClass = c.status === 'موثقة' ? 'ok' : c.status === 'معلقة' ? 'pending' : 'revoked';
+  const statusLabel = c.status === 'موثقة' ? 'شهادة موثقة رقمياً ✓' : c.status === 'معلقة' ? 'الشهادة معلقة ⏳' : 'الشهادة ملغاة ✗';
+  const bannerClass = c.status === 'موثقة' ? 'ok' : 'bad';
+
+  card.className = 'result-card show';
+  card.innerHTML = `
+    <div class="result-status-banner ${bannerClass}">
+      <div class="pulse-dot"></div>
+      <span>${statusLabel}</span>
+    </div>
+    <div class="result-grid">
+      <div class="result-field"><div class="label">اسم الطالب</div><div class="value">${c.student_name || '-'}</div></div>
+      <div class="result-field"><div class="label">رقم الشهادة</div><div class="value">${c.cert_number || '-'}</div></div>
+      <div class="result-field"><div class="label">اسم الدورة</div><div class="value">${c.course_name || '-'}</div></div>
+      <div class="result-field"><div class="label">المدة</div><div class="value">${c.duration || '-'}</div></div>
+      <div class="result-field"><div class="label">تاريخ الإصدار</div><div class="value">${formatDate(c.issue_date)}</div></div>
+      <div class="result-field"><div class="label">حالة الشهادة</div><div class="value s-${statusClass}">${c.status || '-'}</div></div>
+    </div>
+    <div class="result-qr-row">
+      <div class="qr-white-bg" id="inline-qr"></div>
+      <div class="qr-info">
+        <div class="label">رابط التحقق الرسمي</div>
+        <div class="qr-link" id="inline-url">${url}</div>
+        <button class="btn-copy" id="inline-copy-btn" onclick="copyInlineLink()">نسخ رابط التحقق</button>
+      </div>
+    </div>
+    <div class="result-actions">
+      <button class="btn-action print" onclick="window.print()">طباعة</button>
+      <button class="btn-action dl-qr" onclick="downloadInlineQR()">تحميل QR كصورة</button>
+    </div>
+    <div class="result-footer">شهادة إتمام رسمية موثقة رقمياً &mdash; صادرة من منصة Creative Sudani &mdash; جميع الحقوق محفوظة © 2026</div>`;
+
+  // Generate QR
+  setTimeout(() => {
+    new QRCode(document.getElementById('inline-qr'), {
+      text: url, width: 130, height: 130,
+      colorDark: '#000', colorLight: '#fff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  }, 50);
+}
+
+function copyInlineLink() {
+  const url = document.getElementById('inline-url').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('inline-copy-btn');
+    btn.textContent = 'تم النسخ ✓'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'نسخ رابط التحقق'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function downloadInlineQR() {
+  const canvas = document.querySelector('#inline-qr canvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.download = 'qr-cert.png';
+  a.href = canvas.toDataURL();
+  a.click();
+}
+
+/* ===================================================
+   ADMIN — TABLES
+=================================================== */
+function renderCertsTable() {
+  const tbody = document.getElementById('certs-tbody');
+  if (!allCerts.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="icon">📋</div>لا توجد شهادات<br><small style="color:var(--text-dim)">قم بإضافة شهادة جديدة للبدء</small></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = allCerts.map(c => {
+    const statusBadge = c.status === 'موثقة' ? 'ok' : c.status === 'معلقة' ? 'pending' : 'revoked';
+    return `<tr>
+      <td><strong>${c.cert_number}</strong></td>
+      <td>${c.student_name}</td>
+      <td>${c.course_name}</td>
+      <td>${c.duration || '-'}</td>
+      <td>${formatDate(c.issue_date)}</td>
+      <td><span class="badge ${statusBadge}">${c.status}</span></td>
+      <td><button class="btn-icon qr" onclick="openQR('${c.id}')">QR</button></td>
+      <td>
+        <button class="btn-icon edit" onclick="openEditCert('${c.id}')">تعديل</button>
+        <button class="btn-icon del" onclick="confirmDelete('cert','${c.id}','${c.cert_number}')">حذف</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCoursesTable() {
+  const tbody = document.getElementById('courses-tbody');
+  if (!allCourses.length) {
+    tbody.innerHTML = '<tr><td colspan="2"><div class="empty-state"><div class="icon">📚</div>لا توجد كورسات<br><small style="color:var(--text-dim)">قم بإضافة كورس جديد للبدء</small></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = allCourses.map(c => `
+    <tr>
+      <td>${c.name}</td>
+      <td>
+        <button class="btn-icon del" onclick="confirmDelete('course','${c.id}','${c.name}')">حذف</button>
+      </td>
+    </tr>`).join('');
+}
+
+function populateCourseDropdown() {
+  const sel = document.getElementById('f-course-name');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">اختر الكورس...</option>' +
+    allCourses.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+  if (current) sel.value = current;
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.admin-tab').forEach((el,i) => {
+    el.classList.toggle('active', ['certs','courses'][i] === tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+/* ===================================================
+   ADMIN — CERT CRUD
+=================================================== */
+function openAddCert() {
+  document.getElementById('cert-modal-title').textContent = 'إضافة شهادة جديدة';
+  document.getElementById('cert-edit-id').value = '';
+  ['f-cert-number','f-student-name'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-course-name').value = '';
+  document.getElementById('f-duration').value = '';
+  document.getElementById('f-issue-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-status').value = 'موثقة';
+  openModal('cert-modal');
+}
+
+function openEditCert(id) {
+  const c = allCerts.find(x => x.id == id);
+  if (!c) return;
+  document.getElementById('cert-modal-title').textContent = 'تعديل الشهادة';
+  document.getElementById('cert-edit-id').value = c.id;
+  document.getElementById('f-cert-number').value  = c.cert_number;
+  document.getElementById('f-student-name').value = c.student_name;
+  document.getElementById('f-course-name').value  = c.course_name;
+  document.getElementById('f-duration').value     = c.duration || '';
+  document.getElementById('f-issue-date').value   = c.issue_date || '';
+  document.getElementById('f-status').value       = c.status || 'موثقة';
+  openModal('cert-modal');
+}
+
+async function saveCert() {
+  const certNumber  = document.getElementById('f-cert-number').value.trim();
+  const studentName = document.getElementById('f-student-name').value.trim();
+  const courseName  = document.getElementById('f-course-name').value.trim();
+  const duration    = document.getElementById('f-duration').value;
+  const issueDate   = document.getElementById('f-issue-date').value;
+  const status      = document.getElementById('f-status').value;
+  const editId      = document.getElementById('cert-edit-id').value;
+
+  if (!certNumber || !studentName || !courseName || !issueDate) {
+    toast('يرجى ملء جميع الحقول الإلزامية', 'error'); return;
+  }
+
+  const payload = { cert_number: certNumber, student_name: studentName, course_name: courseName, duration, issue_date: issueDate, status };
+
+  try {
+    let err;
+    if (editId) {
+      ({ error: err } = await sb.from(TBL_CERTS).update(payload).eq('id', editId));
+    } else {
+      ({ error: err } = await sb.from(TBL_CERTS).insert([payload]));
+    }
+    if (err) throw err;
+    closeModal('cert-modal');
+    await loadCerts();
+    toast(editId ? 'تم تعديل الشهادة بنجاح ✓' : 'تمت إضافة الشهادة بنجاح ✓', 'success');
+  } catch(e) {
+    toast('خطأ: ' + e.message, 'error');
+  }
+}
+
+async function deleteCert(id) {
+  try {
+    const { error } = await sb.from(TBL_CERTS).delete().eq('id', id);
+    if (error) throw error;
+    await loadCerts();
+    toast('تم حذف الشهادة ✓', 'success');
+  } catch(e) {
+    toast('خطأ في الحذف: ' + e.message, 'error');
+  }
+}
+
+/* ===================================================
+   ADMIN — COURSE CRUD
+=================================================== */
+function openAddCourse() {
+  document.getElementById('course-modal-title').textContent = 'إضافة كورس جديد';
+  document.getElementById('course-edit-id').value = '';
+  document.getElementById('f-course-name-field').value = '';
+  openModal('course-modal');
+}
+
+async function saveCourse() {
+  const name    = document.getElementById('f-course-name-field').value.trim();
+  const editId  = document.getElementById('course-edit-id').value;
+  if (!name) { toast('أدخل اسم الكورس', 'error'); return; }
+
+  try {
+    let err;
+    if (editId) {
+      ({ error: err } = await sb.from(TBL_COURSES).update({ name }).eq('id', editId));
+    } else {
+      ({ error: err } = await sb.from(TBL_COURSES).insert([{ name }]));
+    }
+    if (err) throw err;
+    closeModal('course-modal');
+    await loadCourses();
+    toast('تم حفظ الكورس ✓', 'success');
+  } catch(e) {
+    toast('خطأ: ' + e.message, 'error');
+  }
+}
+
+async function deleteCourse(id) {
+  try {
+    const { error } = await sb.from(TBL_COURSES).delete().eq('id', id);
+    if (error) throw error;
+    await loadCourses();
+    toast('تم حذف الكورس ✓', 'success');
+  } catch(e) {
+    toast('خطأ في الحذف: ' + e.message, 'error');
+  }
+}
+
+/* ===================================================
+   CONFIRM DELETE
+=================================================== */
+function confirmDelete(type, id, label) {
+  document.getElementById('confirm-title').textContent = 'تأكيد الحذف';
+  document.getElementById('confirm-msg').textContent   = `هل أنت متأكد من حذف "${label}"؟ لا يمكن التراجع عن هذا الإجراء.`;
+  document.getElementById('confirm-ok-btn').onclick = async () => {
+    closeModal('confirm-modal');
+    if (type === 'cert')   await deleteCert(id);
+    if (type === 'course') await deleteCourse(id);
+  };
+  openModal('confirm-modal');
+}
+
+/* ===================================================
+   QR MODAL
+=================================================== */
+function openQR(id) {
+  const c = allCerts.find(x => x.id == id);
+  if (!c) return;
+  const url = verifyUrl(c.cert_number);
+  document.getElementById('qr-modal-name').textContent   = c.student_name;
+  document.getElementById('qr-modal-cert').textContent   = c.cert_number;
+  document.getElementById('qr-modal-link').textContent   = url;
+  document.getElementById('qr-modal-course').textContent = c.course_name;
+  document.getElementById('qr-modal-date').textContent   = formatDate(c.issue_date);
+  const box = document.getElementById('modal-qr-box');
+  box.innerHTML = '';
+  setTimeout(() => {
+    new QRCode(box, { text: url, width: 150, height: 150, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.H });
+  }, 50);
+  openModal('qr-modal');
+}
+
+function copyQRLink() {
+  const url = document.getElementById('qr-modal-link').textContent;
+  navigator.clipboard.writeText(url).then(() => toast('تم نسخ الرابط ✓', 'success'));
+}
+
+function downloadQR() {
+  const canvas = document.querySelector('#modal-qr-box canvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.download = 'qr-cert.png';
+  a.href = canvas.toDataURL();
+  a.click();
+}
+
+/* ===================================================
+   EXPORT / IMPORT
+=================================================== */
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(allCerts, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'certificates.json'; a.click();
+}
+
+async function importJSON(e) {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    const text = await file.text();
+    const list = JSON.parse(text);
+    if (!Array.isArray(list)) throw new Error('الملف يجب أن يحتوي على مصفوفة');
+    // upsert by cert_number
+    const { error } = await sb.from(TBL_CERTS).upsert(
+      list.map(c => ({
+        cert_number: c.cert_number || c.certNumber,
+        student_name: c.student_name || c.studentName || c.name,
+        course_name: c.course_name || c.courseName || c.course,
+        duration: c.duration,
+        issue_date: c.issue_date || c.issueDate || c.date,
+        status: c.status || 'موثقة'
+      })),
+      { onConflict: 'cert_number' }
+    );
+    if (error) throw error;
+    await loadCerts();
+    toast(`تم استيراد ${list.length} شهادة ✓`, 'success');
+  } catch(err) {
+    toast('خطأ في الاستيراد: ' + err.message, 'error');
+  }
+  e.target.value = '';
+}
+
+/* ===================================================
+   HELPERS
+=================================================== */
+function formatDate(raw) {
+  if (!raw) return '-';
+  try {
+    return new Date(raw).toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
+  } catch { return raw; }
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
+});
+
+let toastTimer;
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+}
+</script>
+</body>
+</html>
