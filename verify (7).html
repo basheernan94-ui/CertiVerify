@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التحقق من الشهادة - Creative Sudani</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --primary: #1E90FF;
+            --primary-light: #00BFFF;
+            --primary-dark: #0066CC;
+            --accent: #00CEC9;
+            --accent-glow: rgba(0, 206, 201, 0.3);
+            --bg-dark: #0A0A0F;
+            --bg-card: #12121E;
+            --bg-card-hover: #1A1A2E;
+            --bg-input: #0D1B2A;
+            --border: rgba(30, 144, 255, 0.2);
+            --border-focus: rgba(30, 144, 255, 0.5);
+            --text-primary: #E8E8F0;
+            --text-secondary: #A0A0B8;
+            --text-muted: #6B6B8A;
+            --success: #00B894;
+            --danger: #E17055;
+            --warning: #FDCB6E;
+            --glass: rgba(18, 18, 30, 0.85);
+            --glass-border: rgba(30, 144, 255, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-animation {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(30, 144, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 191, 255, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(30, 144, 255, 0.04) 0%, transparent 70%);
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(-2%, 2%) rotate(1deg); }
+            66% { transform: translate(2%, -1%) rotate(-1deg); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .verify-page-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        .cert-result {
+            display: none;
+            max-width: 700px;
+            margin: 0 auto;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .cert-result.show {
+            display: block;
+        }
+
+        .cert-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .cert-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cert-header::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: translate(-30%, -30%) rotate(0deg); }
+            50% { transform: translate(30%, 30%) rotate(180deg); }
+        }
+
+        .cert-badge {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2rem;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .cert-header h2 {
+            font-size: 1.5rem;
+            color: white;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cert-header p {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cert-body {
+            padding: 2rem;
+        }
+
+        .cert-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 1rem;
+            background: var(--bg-input);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .info-item:hover {
+            border-color: var(--primary);
+            transform: translateX(-5px);
+        }
+
+        .info-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(30, 144, 255, 0.15);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-light);
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .info-content label {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+
+        .info-content span {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.4rem 1rem;
+            background: rgba(0, 184, 148, 0.15);
+            color: var(--success);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .cert-footer {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.2rem;
+            background: linear-gradient(135deg, rgba(30,144,255,0.04), rgba(0,206,201,0.04));
+        }
+
+        /* Professional QR + Link block */
+        .verify-block {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 18px;
+            flex: 1;
+            min-width: 280px;
+            max-width: 520px;
+        }
+
+        .verify-block-qr {
+            flex-shrink: 0;
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .verify-block-qr canvas,
+        .verify-block-qr img {
+            width: 72px !important;
+            height: 72px !important;
+        }
+
+        .verify-block-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .verify-block-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--primary-light);
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            letter-spacing: 0.3px;
+        }
+
+        .verify-link-display {
+            display: block;
+            color: var(--text-primary);
+            font-size: 0.78rem;
+            text-decoration: none;
+            word-break: break-all;
+            line-height: 1.4;
+            font-family: 'Courier New', monospace;
+            background: rgba(30,144,255,0.08);
+            border: 1px solid rgba(30,144,255,0.2);
+            border-radius: 6px;
+            padding: 5px 8px;
+            transition: all 0.2s;
+        }
+
+        .verify-link-display:hover {
+            background: rgba(30,144,255,0.15);
+            border-color: rgba(30,144,255,0.4);
+            color: var(--primary-light);
+        }
+
+        .verify-block-hint {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            margin-top: 5px;
+        }
+
+        .cert-footer-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .verify-link {
+            color: var(--primary-light);
+            font-size: 0.85rem;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .official-seal {
+            margin: 2rem auto;
+            max-width: 500px;
+            text-align: center;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(0, 206, 201, 0.1), rgba(30, 144, 255, 0.1));
+            border: 2px dashed var(--accent);
+            border-radius: 16px;
+            position: relative;
+        }
+
+        .official-seal::before {
+            content: '✓';
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            width: 30px;
+            height: 30px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .official-seal i { font-size: 2rem; color: var(--accent); margin-bottom: 0.5rem; }
+        .official-seal h3 { color: var(--accent); font-size: 1.1rem; margin-bottom: 0.3rem; }
+        .official-seal p { color: var(--text-secondary); font-size: 0.85rem; }
+
+        .not-found {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+            background: var(--bg-card);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .not-found.show { display: block; animation: fadeInUp 0.5s ease; }
+        .not-found i { font-size: 4rem; color: var(--danger); margin-bottom: 1rem; opacity: 0.8; }
+        .not-found h3 { color: var(--text-primary); margin-bottom: 0.5rem; }
+        .not-found p { color: var(--text-secondary); }
+
+        .btn {
+            padding: 0.7rem 1.2rem;
+            border-radius: 10px;
+            border: none;
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 15px rgba(30, 144, 255, 0.3);
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(30, 144, 255, 0.4); }
+
+        .btn-danger { background: rgba(225, 112, 85, 0.15); color: var(--danger); border: 1px solid rgba(225, 112, 85, 0.3); }
+        .btn-danger:hover { background: rgba(225, 112, 85, 0.25); }
+
+        .btn-secondary { background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { border-color: var(--primary); color: var(--text-primary); }
+
+        .btn-success { background: rgba(0,184,148,0.15); color: var(--success); border: 1px solid rgba(0,184,148,0.3); }
+        .btn-success:hover { background: rgba(0,184,148,0.25); }
+
+        .toast-container {
+            position: fixed;
+            top: 20px; left: 20px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideInLeft 0.3s ease, fadeOut 0.3s ease 2.7s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.info { background: var(--primary); }
+
+        @media (max-width: 768px) {
+            .cert-footer { flex-direction: column; align-items: stretch; }
+            .verify-block { max-width: 100%; }
+            .cert-footer-actions { justify-content: center; }
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #certResult, #certResult * { visibility: visible; }
+            #certResult {
+                position: absolute; top: 0; left: 0; width: 100%;
+                margin: 0; max-width: 100%;
+            }
+            .cert-footer-actions, .verify-block-hint { display: none !important; }
+        }
+
+        .spinner {
+            width: 20px; height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Loading state (only for this standalone page, not part of the print template) */
+        #loadingState {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 5rem 1rem;
+        }
+        #loadingState .spinner {
+            width: 40px; height: 40px; border-width: 3px;
+            border: 3px solid rgba(30,144,255,0.25);
+            border-top-color: var(--primary);
+        }
+        #loadingState p { color: var(--text-secondary); font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+
+    <div class="bg-animation"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="verify-page-container">
+
+        <!-- Loading state -->
+        <div id="loadingState">
+            <div class="spinner"></div>
+            <p>جاري التحقق من الشهادة...</p>
+        </div>
+
+        <!-- Cert result (exact same markup/CSS as the print template in index.html) -->
+        <div class="cert-result" id="certResult">
+            <div class="cert-card">
+                <div class="cert-header">
+                    <div class="cert-badge"><i class="fas fa-shield-alt"></i></div>
+                    <h2>شهادة موثقة رقمياً ✓</h2>
+                    <p>تم التحقق من صحة هذه الشهادة وإصدارها رسمياً من منصة Creative Sudani</p>
+                </div>
+                <div class="cert-body">
+                    <div class="cert-info-grid">
+                        <div class="info-item">
+                            <div class="info-icon"><i class="fas fa-user"></i></div>
+                            <div class="info-content"><label>اسم الطالب</label><span id="resName">-</span></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-icon"><i class="fas fa-hashtag"></i></div>
+                            <div class="info-content"><label>رقم الشهادة</label><span id="resId">-</span></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-icon"><i class="fas fa-book"></i></div>
+                            <div class="info-content"><label>اسم الكورس</label><span id="resCourse">-</span></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-icon"><i class="fas fa-calendar-alt"></i></div>
+                            <div class="info-content"><label>تاريخ الإصدار</label><span id="resDate">-</span></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="info-content">
+                                <label>حالة الشهادة</label>
+                                <span class="status-badge" id="resStatusBadge"><i class="fas fa-check"></i> موثقة رقمياً</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="cert-footer">
+                    <!-- QR + Link section (professional layout) -->
+                    <div class="verify-block">
+                        <div class="verify-block-qr">
+                            <div id="resultQR"></div>
+                        </div>
+                        <div class="verify-block-info">
+                            <div class="verify-block-title">
+                                <i class="fas fa-shield-alt"></i>
+                                رابط التحقق الرسمي
+                            </div>
+                            <a href="#" class="verify-link-display" id="resLink" target="_blank">-</a>
+                            <div class="verify-block-hint">امسح رمز QR أو افتح الرابط للتحقق من الشهادة</div>
+                        </div>
+                    </div>
+                    <!-- Action buttons -->
+                    <div class="cert-footer-actions">
+                        <button class="btn btn-secondary" onclick="printVerifyResult()">
+                            <i class="fas fa-print"></i>
+                            طباعة
+                        </button>
+                        <button class="btn btn-secondary" onclick="copyVerifyLink()">
+                            <i class="fas fa-copy"></i>
+                            نسخ رابط التحقق
+                        </button>
+                        <button class="btn btn-secondary" onclick="downloadResultQR()">
+                            <i class="fas fa-download"></i>
+                            تحميل QR كصورة
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="official-seal">
+                <i class="fas fa-stamp"></i>
+                <h3>شهادة إتمام رسمية موثقة رقمياً</h3>
+                <p>صادرة من منصة Creative Sudani - جميع الحقوق محفوظة © 2026</p>
+            </div>
+        </div>
+
+        <div class="not-found" id="notFound">
+            <i class="fas fa-times-circle"></i>
+            <h3>لم يتم العثور على الشهادة</h3>
+            <p id="notFoundMsg">رقم الشهادة الذي أدخلته غير موجود في قاعدة البيانات. يرجى التأكد من الرقم والمحاولة مرة أخرى.</p>
+        </div>
+
+    </div>
+
+<script>
+    // ============================================================
+    // SUPABASE CONFIG — same project/table/columns used by index.html
+    // ============================================================
+    const SUPABASE_URL = 'https://ajbjypvxdeayfxfzwnil.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqYmp5cHZ4ZGVheWZ4Znp3bmlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMzg1NDAsImV4cCI6MjA5NjYxNDU0MH0.1uPlwCRWZjyTc15IJZBnYirF2NZ3vxKF3OFPTaIH1N0';
+    const TABLE = 'certificates';
+
+    const HEADERS = {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Prefer': 'return=representation'
+    };
+
+    let currentResultCert = null;
+
+    async function sbFetch(path, options = {}) {
+        const url = SUPABASE_URL + '/rest/v1/' + path;
+        const res = await fetch(url, { ...options, headers: { ...HEADERS, ...(options.headers || {}) } });
+        if (!res.ok) {
+            const err = await res.text();
+            throw new Error(err);
+        }
+        const text = await res.text();
+        return text ? JSON.parse(text) : null;
+    }
+
+    // ============================================================
+    // BOOT — read ?cert= (or #cert=) from the URL and fetch it
+    // ============================================================
+    (async () => {
+        const params = new URLSearchParams(window.location.search);
+        const certIdParam = params.get('cert');
+        const certIdHash = window.location.hash.startsWith('#cert=') ? window.location.hash.replace('#cert=', '') : null;
+        const certId = (certIdParam || certIdHash || '').trim();
+
+        if (!certId) {
+            showNotFound('لم يتم تحديد رقم شهادة في الرابط.');
+            return;
+        }
+
+        try {
+            const rows = await sbFetch(TABLE + '?cert_id=eq.' + encodeURIComponent(certId));
+            const row = (rows || [])[0];
+            const cert = row ? {
+                id: row.cert_id,
+                name: row.name,
+                course: row.course,
+                duration: row.duration,
+                date: row.issue_date,
+                status: row.status,
+                verifyUrl: row.verify_url || ''
+            } : null;
+
+            if (cert && cert.status === 'موثقة') {
+                currentResultCert = cert;
+                displayCertificate(cert);
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('certResult').classList.add('show');
+            } else {
+                showNotFound('رقم الشهادة الذي أدخلته غير موجود في قاعدة البيانات. يرجى التأكد من الرقم والمحاولة مرة أخرى.');
+            }
+        } catch (e) {
+            console.error(e);
+            showNotFound('تعذّر الاتصال بقاعدة البيانات. يرجى المحاولة لاحقاً.');
+        }
+    })();
+
+    function showNotFound(msg) {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('notFoundMsg').textContent = msg;
+        document.getElementById('notFound').classList.add('show');
+    }
+
+    // ============================================================
+    // DISPLAY — identical to displayCertificate() in index.html
+    // ============================================================
+    function displayCertificate(cert) {
+        document.getElementById('resName').textContent = cert.name;
+        document.getElementById('resId').textContent = cert.id;
+        document.getElementById('resCourse').textContent = cert.course;
+        document.getElementById('resDate').textContent = cert.date;
+
+        const statusBadge = document.getElementById('resStatusBadge');
+        const statusIcon = cert.status === 'موثقة' ? 'check' : cert.status === 'ملغاة' ? 'times' : 'clock';
+        statusBadge.innerHTML = '<i class="fas fa-' + statusIcon + '"></i> ' + cert.status;
+        statusBadge.style.background = cert.status === 'موثقة' ? 'rgba(0,184,148,0.15)' : cert.status === 'ملغاة' ? 'rgba(225,112,85,0.15)' : 'rgba(253,203,110,0.15)';
+        statusBadge.style.color = cert.status === 'موثقة' ? 'var(--success)' : cert.status === 'ملغاة' ? 'var(--danger)' : 'var(--warning)';
+
+        const verifyUrl = getCertLink(cert.id);
+        const linkEl = document.getElementById('resLink');
+        linkEl.textContent = verifyUrl;
+        linkEl.href = verifyUrl;
+
+        const qrContainer = document.getElementById('resultQR');
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+            text: verifyUrl,
+            width: 72,
+            height: 72,
+            colorDark: '#0D1B2A',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+
+    // ============================================================
+    // ACTIONS — identical to index.html (print / copy link / download QR)
+    // ============================================================
+    function printVerifyResult() {
+        if (!currentResultCert) return;
+        window.print();
+    }
+
+    function copyVerifyLink() {
+        if (!currentResultCert) return;
+        const link = getCertLink(currentResultCert.id);
+        const fallbackCopy = () => {
+            const tmp = document.createElement('input');
+            tmp.value = link;
+            document.body.appendChild(tmp);
+            tmp.select();
+            document.execCommand('copy');
+            tmp.remove();
+            showToast('تم نسخ رابط التحقق', 'success');
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(link).then(() => {
+                showToast('تم نسخ رابط التحقق', 'success');
+            }).catch(fallbackCopy);
+        } else {
+            fallbackCopy();
+        }
+    }
+
+    function downloadResultQR() {
+        const canvas = document.querySelector('#resultQR canvas');
+        if (!canvas) { showToast('لم يتم العثور على QR', 'error'); return; }
+        const certId = (currentResultCert || {}).id || 'cert';
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = 'QR_' + certId + '.png';
+        a.click();
+        showToast('تم تحميل صورة QR', 'success');
+    }
+
+    function getCertLink(certId) {
+        const basePath = window.location.pathname.split('/').pop() || 'verify.html';
+        return window.location.origin + window.location.pathname.replace(/[^/]+$/, '') + basePath + '?cert=' + encodeURIComponent(certId);
+    }
+
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = 'toast ' + type;
+        const icons = { success: 'check-circle', error: 'times-circle', info: 'info-circle' };
+        toast.innerHTML = '<i class="fas fa-' + (icons[type] || 'info-circle') + '"></i> ' + message;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+</script>
+</body>
+</html>
